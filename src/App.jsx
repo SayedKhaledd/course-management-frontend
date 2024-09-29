@@ -1,25 +1,21 @@
-import './App.css'
-import CustomSideBar from './components/CustomSideBar.jsx'
-import CustomTable from "./components/CustomTable.jsx";
+import './styles/App.css'
+import {Route, Routes} from "react-router-dom";
+import Clients from "./pages/Clients.jsx";
+import Courses from "./pages/Courses.jsx";
+import SideBar from "./components/SideBar.jsx";
 
 function App() {
 
     return (
         <>
-
-            <footer className="footer">
-                <p>Footer</p>
-            </footer>
-
-            <div className="content">
-                <div className="sidebar">
-                    <CustomSideBar/>
-                </div>
-                <main className="table">
-                    <CustomTable/>
-                </main>
+            <div className="app-container">
+            <SideBar className="sidebar"></SideBar>
+            <Routes className="main-content">
+                <Route path="/" element={<Clients/>}/>
+                <Route path="/clients" element={<Clients/>}/>
+                <Route path="/courses" element={<Courses/>}/>
+            </Routes>
             </div>
-
 
         </>
     )

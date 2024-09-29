@@ -1,0 +1,54 @@
+/* SideBar.module.css */
+.sidebar {
+    width: 200px;
+    height: 100vh;
+    background-color: var(--primary-color);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 1rem;
+    justify-content: left;
+}
+
+.menu {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 20px;
+}
+
+.menuItem {
+    height: 20px;
+    width: auto;
+    text-align: start;
+    justify-content: center;
+    padding: 0.5rem;
+}
+
+img {
+    padding-right: 10px;
+}
+
+.menuItem:hover {
+    background-color: var(--secondary-color); /* dark blue color */
+    /*border: 5px solid var(--secondary-color);*/
+    border-radius: 1.5rem;
+    justify-content: left;
+}
+
+.Link {
+    font-family: 'Roboto', sans-serif;
+    text-underline-mode: none;
+    color: black;
+    text-decoration: none;
+
+}
+
+h3 {
+    text-align: left;
+    font-size: 1rem;
+    font-family: 'Roboto', sans-serif;
+    color: black;
+    height: 1rem;
+    padding: 10px;
+}
