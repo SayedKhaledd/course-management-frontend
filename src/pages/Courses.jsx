@@ -15,7 +15,7 @@ function Courses() {
             selector: row => row.email,
         },
         {
-            name: 'Phone Number',
+            name: 'Phone',
             selector: row => row.phone,
         },
         {
@@ -32,7 +32,7 @@ function Courses() {
         },
         //referral source, same as above
         {
-            name: 'Referral Source and new word is here',
+            name: 'Referral Source',
             selector: row => row.referralSource ? row.referralSource.source : 'N/A',
         },
         //add modified date

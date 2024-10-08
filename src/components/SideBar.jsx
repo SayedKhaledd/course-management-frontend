@@ -18,8 +18,8 @@ const SideBar = () => {
             <h3>Dashboard</h3>
 
             <div className={styles.menu}>
-                {Menus.map((menu) => (
-                    <div key={menu.id} className={styles.menuItem}>
+                {Menus.map((menu, index) => (
+                    <div key={index} className={styles.menuItem}>
                         <img src={IMAGES_PATH + menu.src}/>
                         <Link to={`/${menu.title.toLowerCase()}`} className={styles.Link}> {menu.title} </Link>
                     </div>
