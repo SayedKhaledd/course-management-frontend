@@ -6,33 +6,45 @@ import {Column} from 'primereact/column';
 import {Button} from 'primereact/button';
 import 'primeicons/primeicons.css';
 import '../styles/Clients.css';
-import {useNavigate} from 'react-router-dom'; // Import useNavigate from react-router-dom
+import {useNavigate} from 'react-router-dom';
 import {downloadCSV, simplifyDate} from "../utils.js";
 import {Dropdown} from "primereact/dropdown";
 import Notification from "../components/Notification.jsx";
+import {Dialog} from 'primereact/dialog';
+import {Card} from 'primereact/card';
+import {InputText} from 'primereact/inputtext';
 
 
 function Clients() {
     const [clients, setClients] = useState([]);
-    const [editing, setEditing] = useState({clientId: null, columnField: null}); // Track editing state
-    const [editedValue, setEditedValue] = useState(''); // Track only the value being edited
-    const [statusOptions, setStatusOptions] = useState([]); // Track status options
+    const [newClient, setNewClient] = useState({});
+    const [editing, setEditing] = useState({clientId: null, columnField: null});
+    const [editedValue, setEditedValue] = useState('');
+    const [statusOptions, setStatusOptions] = useState([]);
     const axios = useAxios();
-    const navigate = useNavigate(); // Initialize navigate
+    const navigate = useNavigate();
     const [message, setMessage] = useState('');
     const [notificationType, setNotificationType] = useState(null);
+    const [displayDialog, setDisplayDialog] = useState(false);
 
 
     const fetchClients = () => {
         axios.get(BASE_URL + 'client/all',)
             .then(response => setClients(response.data.response))
-            .catch(error => console.error(error));
+            .catch(error => {
+                    setMessage(`Failed to fetch clients: ${error}`);
+                    setNotificationType('error');
+                }
+            );
     };
     const fetchStatusOptions = () => {
-        axios.get(BASE_URL + 'client-status/all') // Assuming the API endpoint is '/statuses'
+        axios.get(BASE_URL + 'client-status/all')
             .then(response =>
                 setStatusOptions(response.data.response.map(status => ({id: status.id, status: status.status}))))
-            .catch(error => console.error(error));
+            .catch(error => {
+                setMessage(`Failed to fetch status options: ${error}`);
+                setNotificationType('error');
+            });
     };
 
     useEffect(() => {
@@ -54,7 +66,6 @@ function Clients() {
     };
 
     const getUpdateEndpoint = (clientId, column) => {
-        console.log(editedValue)
         if (column === 'status') {
             return `${BASE_URL}client/${clientId}/status/${editedValue.id}`;
         }
@@ -63,21 +74,16 @@ function Clients() {
 
     const onSubmitEdit = async (clientId, columnField) => {
         const endpoint = getUpdateEndpoint(clientId, columnField);
-
-        try {
-            const payload = columnField === 'status' ? {} : {[columnField]: editedValue};
-            await axios.patch(endpoint, payload);
-            console.log(`Updated ${columnField} successfully`);
+        const payload = columnField === 'status' ? {} : {[columnField]: editedValue};
+        axios.patch(endpoint, payload).then(() => {
             fetchClients();
             onCancelEdit();
             setNotificationType('success');
             setMessage(`Updated ${columnField} successfully`);
-
-        } catch (error) {
-            console.error(`Failed to update ${columnField}:`, error);
+        }).catch(error => {
             setNotificationType('error');
             setMessage(`Failed to update ${columnField}: ${error}`);
-        }
+        });
     };
 
     const onCellChange = (e) => {
@@ -86,24 +92,53 @@ function Clients() {
     const onStatusChange = (e) => {
         setEditedValue(statusOptions.find(option => option.status === e.target.value));
     };
+    const openDialog = () => {
+        setDisplayDialog(true);
+    };
 
-    const paginatorLeft = <Button type="button" icon="pi pi-refresh" text/>;
+    const closeDialog = () => {
+        setDisplayDialog(false);
+        setNewClient({});
+    };
+
+    const createClient = () => {
+        closeDialog();
+        axios.post(BASE_URL + 'client', newClient)
+            .then(() => {
+                fetchClients();
+                setNotificationType('success');
+                setMessage('Client created successfully');
+            })
+
+            .catch(error => {
+                setNotificationType('error');
+                setMessage(`Failed to create client: ${error}`);
+            });
+
+    };
+
+    const paginatorLeft = <Button type="button" icon="pi pi-refresh" text onClick={() => {
+        fetchClients();
+        fetchStatusOptions();
+        setMessage('Data refreshed successfully');
+        setNotificationType('success');
+    }}/>;
+
     const paginatorRight = <Button type="button" icon="pi pi-download" text onClick={() => downloadCSV(clients)}/>;
     const statusTemplate = (rowData, columnField, isEditable = true) => {
         const isEditing = editing.clientId === rowData.id && editing.columnField === columnField;
-        console.log(rowData.clientStatus?.status);
         return (
             <div style={{display: 'flex', alignItems: 'center'}}>
                 {isEditing ? (
                     <>
                         <Dropdown
-                            value={editedValue?.status} // Current value
-                            options={statusOptions.map(e => e.status)} // Options fetched from the API
-                            onChange={onStatusChange} // Handle the selection
-                            optionLabel="name" // Label to display in the dropdown
+                            value={editedValue?.status}
+                            options={statusOptions.map(e => e.status)}
+                            onChange={onStatusChange}
+                            optionLabel="name"
                             style={{marginRight: '8px'}}
                             placeholder="Select Status"
-                            onClick={(e) => e.stopPropagation()} // Prevent row click event
+                            onClick={(e) => e.stopPropagation()}
 
                         />
                         <Button
@@ -127,7 +162,7 @@ function Clients() {
                                 className="p-button-text p-button-secondary"
                                 style={{marginLeft: '8px'}}
                                 onClick={(e) => {
-                                    e.stopPropagation(); // Prevent row click event
+                                    e.stopPropagation();
                                     onEdit(rowData.id, columnField, rowData[columnField]);
                                 }
                                 }
@@ -200,7 +235,7 @@ function Clients() {
                 className="p-datatable-table"
                 scrollable={true}
                 removableSort
-                onRowClick={(e) => onRowClick(e.data)} // Handle row click
+                onRowClick={(e) => onRowClick(e.data)}
 
             >
                 <Column field="name" header="Name" filter={true} sortable={true}
@@ -240,6 +275,49 @@ function Clients() {
                         body={(rowData) => cellTemplate(rowData, 'modifiedBy', false)}/>
 
             </DataTable>
+            <Button
+                icon="pi pi-plus"
+                className="p-button-rounded p-button-primary"
+                style={{position: 'fixed', marginTop: '200px', bottom: '16px', right: '16px', zIndex: 1000}}
+                onClick={openDialog}
+                label="New Client"
+            />
+            <Dialog
+                header="Create New Client"
+                visible={displayDialog}
+                style={{width: '50vw'}}
+                modal
+                onHide={closeDialog}
+            >
+                {/* Card inside the dialog for the client creation form */}
+                <Card title="Client Details">
+                    <div className="p-fluid">
+                        <div className="p-field">
+                            <label htmlFor="name">Name</label>
+                            <InputText id="name"
+                                       onInput={(e) => setNewClient({...newClient, name: e.target.value})}/>
+                        </div>
+                        <div className="p-field">
+                            <label htmlFor="email">Email</label>
+                            <InputText id="email"
+                                       onInput={(e) => setNewClient({...newClient, email: e.target.value})}/>
+                        </div>
+                        <div className="p-field">
+                            <label htmlFor="phone">Phone</label>
+                            <InputText id="phone"
+                                       onInput={(e) => setNewClient({...newClient, phone: e.target.value})}/>
+                        </div>
+
+                        {/* Save and Cancel buttons */}
+                        <div className="p-d-flex p-jc-end">
+                            <Button label="Save" icon="pi pi-check" onClick={createClient} className="p-mr-2"/>
+                            <Button label="Cancel" icon="pi pi-times" onClick={closeDialog}
+                                    className="p-button-secondary"/>
+                        </div>
+                    </div>
+                </Card>
+            </Dialog>
+
             <Notification status={notificationType} message={message}/>
         </div>
     );
