@@ -1,0 +1,9 @@
+.selectable-cell {
+    user-select: text; /* Enable text selection */
+}
+
+.cell-content {
+    white-space: nowrap; /* Prevent wrapping for easier copying */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

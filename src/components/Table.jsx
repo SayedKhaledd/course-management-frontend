@@ -1,4 +1,6 @@
-import DataTable from 'react-data-table-component';
+//import from prime react
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
 import styles from '../styles/modules/Table.module.css';
 
 const customStyles = {
@@ -70,7 +72,6 @@ const customStyles = {
 
 function Table({columns, data, paginationPerPage}) {
     return (
-        <div className={styles.TableContainer}>
             <DataTable
                 columns={columns}
                 data={data} customStyles={customStyles}
@@ -78,9 +79,8 @@ function Table({columns, data, paginationPerPage}) {
                 fixedHeaderScrollHeight="600px"
                 fixedHeader={true}
                 highlightOnHover
-                striped
-            />
-        </div>
+                striped />
+
     );
 }
 

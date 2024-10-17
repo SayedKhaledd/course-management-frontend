@@ -1,0 +1,35 @@
+/* sidebar.css */
+.sidebar {
+    width: fit-content;
+    height: 100%;
+    background-color: var(--primary-bg-color);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 1rem;
+    justify-content: left;
+}
+
+
+/* PanelMenu header content background and text color */
+/*.sidebar .p-panelmenu-header-content-icon {*/
+/*    width: 20px;*/
+/*}*/
+
+.sidebar .p-panelmenu-header-content {
+    background: var(--primary-bg-color) !important;
+}
+
+.sidebar .p-panelmenu-header-content:hover {
+    background: var(--secondary-bg-color) !important;
+    border-radius: 1rem;
+}
+
+h3 {
+    text-align: left;
+    font-size: 1rem;
+    font-family: 'Roboto', sans-serif;
+    color: black;
+    height: 1rem;
+    padding: 10px;
+}

@@ -8,18 +8,23 @@ import {Button} from 'primereact/button';
 // import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css'; // For using icons
 
-function Courses() {
+function Sales() {
     const columns = [
-        {name: 'Code', selector: row => row.code},
-        {name: 'Part', selector: row => row.part},
-        {name: 'Name', selector: row => row.name},
-        {name: 'Price', selector: row => row.price},
-        {name: 'Status', selector: row => row.courseStatus ? row.courseStatus.status : 'N/A'},
-        {name: 'Start Date', selector: row => row.startDate},
-        {name: 'End Date', selector: row => row.endDate},
+        {
+            name: 'Client Name',
+            selector: row => row.clientName
+        },
+        {name: 'Course Code', selector: row => row.courseCode},
+        {name: 'Course Name', selector: row => row.courseName},
+        {name: 'Amount', selector: row => row.amount},
+        {name: 'Date', selector: row => row.date},
+        {name: 'Payment Type', selector: row => row.paymentType},
+        {name: 'Payment Method', selector: row => row.paymentMethod},
+        {name: 'Currency', selector: row => row.currency},
+
     ];
 
-    const [courses, setCourses] = useState([]);
+    const [sales, setSales] = useState([]);
     const axios = useAxios();
 
     useEffect(() => {
@@ -36,8 +41,8 @@ function Courses() {
         //     setClients(response.data.response.result);
         // }).catch(error => console.log(error));
 
-        axios.get(BASE_URL + 'course/all').then(response => {
-            setCourses(Array.isArray(response.data.response) ? response.data.response : []);
+        axios.get(BASE_URL + 'sales/all').then(response => {
+            setSales(Array.isArray(response.data.response) ? response.data.response : []);
         }).catch(error => console.log(error));
 
 
@@ -49,7 +54,7 @@ function Courses() {
     return (
         <div style={{padding: '16px'}}>
             <DataTable
-                value={courses}
+                value={sales}
                 paginator
                 rows={10}
                 rowsPerPageOptions={[5, 10, 20]}
@@ -64,11 +69,11 @@ function Courses() {
                 className="p-datatable-table"  // Use smaller table rows
             >
                 {columns.map((col, index) => (
-                    <Column key={index} field={col.selector} header={col.name} filter  />
+                    <Column key={index} field={col.selector} header={col.name}/>
                 ))}
             </DataTable>
         </div>
     );
 }
 
-export default Courses;
+export default Sales;

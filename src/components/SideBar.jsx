@@ -1,31 +1,35 @@
 "use client";
 
-import styles from "../styles/modules/SideBar.module.css";
 import '../styles/colors.css'; // Import custom CSS file
-import {Link} from 'react-router-dom';
-import {IMAGES_PATH} from "../constants.js";
+import {useNavigate} from 'react-router-dom';
+import {PanelMenu} from 'primereact/panelmenu';
+import 'primeicons/primeicons.css'; // For using icons
+import 'primereact/resources/themes/lara-light-indigo/theme.css';
+import {Badge} from "primereact/badge";
+import "../styles/sidebar.css"
 
-const Menus = [
-    {title: "Clients", src: "clients.svg"},
-    {title: "Courses", src: "courses.svg"},
-    {title: "Installments", src: "installments.svg"},
-    {title: "Sales ", src: "sales.svg"},
-    {title: "Refunds", src: "refunds.svg"},
-];
+
 const SideBar = () => {
-    return (
-        <div className={styles.sidebar}>
-            <h3>Dashboard</h3>
+    const nav = useNavigate();
 
-            <div className={styles.menu}>
-                {Menus.map((menu, index) => (
-                    <div key={index} className={styles.menuItem}>
-                        <img src={IMAGES_PATH + menu.src}/>
-                        <Link to={`/${menu.title.toLowerCase()}`} className={styles.Link}> {menu.title} </Link>
-                    </div>
-                ))}
-            </div>
+    const command = (title) => {
+        nav('/' + title.toLowerCase());
+    };
+
+    const Menus = [
+        {label: "Clients", icon: "pi pi-users", command: () => command("Clients")},
+        {label: "Courses", icon: "pi pi-book", command: () => command("Courses")},
+        {label: "Installments", icon: "pi pi-money-bill", command: () => command("Installments")},
+        {label: "Sales", icon: "pi pi-wallet", command: () => command("Sales")},
+        {label: "Refunds", icon: "pi pi-refresh", command: () => command("Refunds")}
+    ];
+
+    return (
+        <div className="sidebar">
+            <h3>Dashboard</h3>
+            <PanelMenu model={Menus}></PanelMenu>
         </div>
-    )
-}
-export default SideBar
+    );
+};
+
+export default SideBar;
