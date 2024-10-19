@@ -1,7 +1,7 @@
 import './styles/App.css';
 import {BrowserRouter, Route, Routes} from 'react-router-dom';
 import Courses from './pages/Courses.jsx';
-import Clients from './pages/Clients.jsx';
+import ClientDetails from './pages/ClientDetails.jsx';
 import SideBar from './components/SideBar.jsx';
 import kc, {initOptions} from './keycloak.js';
 import {ReactKeycloakProvider} from '@react-keycloak/web';
@@ -9,7 +9,7 @@ import PrivateRoute from './components/PrivateRoute.jsx';
 import Installments from "./pages/Installments.jsx";
 import Sales from "./pages/Sales.jsx";
 import Refunds from "./pages/Refunds.jsx";
-import ClientDetails from "./pages/ClientDetails.jsx";
+import Clients from "./pages/Clients.jsx";
 
 
 function App() {
@@ -34,7 +34,7 @@ function App() {
 
             </BrowserRouter>
         </ReactKeycloakProvider>
-);
+    );
 }
 
 export default App;
