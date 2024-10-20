@@ -1,26 +1,24 @@
-import React, {useEffect, useState} from 'react';
-import {Card} from 'primereact/card';
-import {Avatar} from 'primereact/avatar';
-import {InputText} from 'primereact/inputtext';
-import {Dropdown} from 'primereact/dropdown';
-import {Button} from 'primereact/button';
-import {Dialog} from 'primereact/dialog';
+import {Card} from "primereact/card";
+import {Avatar} from "primereact/avatar";
+import {InputText} from "primereact/inputtext";
+import {Button} from "primereact/button";
+import HistoryDialog from "../components/HistoryDialog.jsx";
+import React, {useEffect, useState} from "react";
+import {useLocation, useParams} from "react-router-dom";
 import useAxios from "../useAxios.js";
-import {useLocation, useParams} from 'react-router-dom';
-import '../styles/Client_Details.css';
-import {simplifyDate} from "../utils.js";
+import apiEndpoints from "../apiEndpoints.js";
 import Notification from "../components/Notification.jsx";
 import Table from "../components/Table.jsx";
-import apiEndpoints from "../apiEndpoints.js";
+import {Dialog} from "primereact/dialog";
+import {Dropdown} from "primereact/dropdown";
 import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import CellTemplate from "../templates/CellTemplate.jsx";
-import HistoryDialog from "../components/HistoryDialog.jsx";
+import {simplifyDate} from "../utils.js";
 
-
-const ClientDetails = () => {
+const CourseDetails = () => {
     const location = useLocation();
     const {id} = useParams();
-    const [client, setClient] = useState(location.state?.client || null);
+    const [course, setCourse] = useState(location.state?.client || null);
     const axios = useAxios();
 
     const [historyVisible, setHistoryVisible] = useState(false);
@@ -33,35 +31,51 @@ const ClientDetails = () => {
         columnField: '',
         editedValue: null
     });
-    const [coursesOptions, setCoursesOptions] = useState([]);
+    const [clientOptions, setClientOptions] = useState([]);
     const [paymentMethodOptions, setPaymentMethodOptions] = useState([]);
     const [paymentStatusOptions, setPaymentStatusOptions] = useState([]);
     const [actionOptions, setActionOptions] = useState([]);
     const [referralSourceOptions, setReferralSourceOptions] = useState([]);
     const [dialogState, setDialogState] = useState({visible: false, newEnrollment: {}});
+    const [courseLecturers, setCourseLecturers] = useState([]);
+    const [editingCourseLecturerState, setEditingCourseLecturerState] = useState({
+        id: '',
+        columnField: '',
+        editedValue: null
+    });
+    const [lecturerDialogState, setLecturerDialogState] = useState({visible: false, newLecturer: {}});
 
 
-    const fetchClient = () => {
-        axios.get(apiEndpoints.client(id))
-            .then(response => setClient(response.data.response))
-            .catch(error => console.error(error));
+    const fetchCourse = () => {
+        axios.get(apiEndpoints.course(id))
+            .then(response => setCourse(response.data.response))
+            .catch(error => setNotification({message: 'Failed to fetch course ' + error, type: 'error'}));
     }
 
+
     const fetchEnrollments = () => {
-        axios.get(apiEndpoints.enrollmentsByClientId(id))
+        axios.get(apiEndpoints.enrollmentsByCourseId(id))
             .then(response => setEnrollments(response.data.response))
-            .catch(error => {
-                setNotification({message: 'Failed to fetch enrollments' + error, type: 'error'});
-            });
-    };
-    const fetchCourseOptions = () => {
-        axios.get(apiEndpoints.courses)
+            .catch(error => setNotification({message: 'Failed to fetch enrollments ' + error, type: 'error'}));
+    }
+    const fetchClientOptions = () => {
+        axios.get(apiEndpoints.clients)
             .then(response => {
-                setCoursesOptions(response.data.response.map(course => ({name: course.name, id: course.id})));
+                setClientOptions(response.data.response.map(client => ({name: client.name, id: client.id})));
             }).catch(error => {
             setNotification({message: 'Failed to fetch course options' + error, type: 'error'});
         });
     };
+
+    const fetchCourseLecturers = () => {
+        axios.get(apiEndpoints.courseLecturersByCourseId(id))
+            .then(response => {
+                setCourseLecturers(response.data.response);
+            }).catch(error => {
+            setNotification({message: 'Failed to fetch course lecturers' + error, type: 'error'});
+        });
+    }
+
     const fetchPaymentMethodOptions = () => {
         axios.get(apiEndpoints.paymentMethods)
             .then(response => {
@@ -99,44 +113,49 @@ const ClientDetails = () => {
     }
 
     useEffect(() => {
-        if (!client) {
-            fetchClient();
+        if (!course) {
+            fetchCourse();
         }
         fetchEnrollments();
-        fetchCourseOptions();
+        fetchClientOptions();
         fetchPaymentMethodOptions();
         fetchPaymentStatusOptions();
         fetchActionOptions();
         fetchReferralSourceOptions();
+        fetchCourseLecturers();
     }, []);
 
     const handleInputChange = (e, field) => {
-        setClient({...client, [field]: e.target.value});
+        setCourse({...course, [field]: e.target.value});
     };
-
     const handleSave = async (columnField) => {
-        const endpoint = apiEndpoints.getClientUpdateEndpoint(id, columnField, client[columnField]?.id);
-        const payload = {[columnField]: client[columnField]};
+        const endpoint = apiEndpoints.getCourseUpdateEndpoint(id, columnField, course[columnField]?.id);
+        const payload = {[columnField]: course[columnField]};
         await axios.patch(endpoint, payload).then(() => {
-            fetchClient();
+            fetchCourse();
             setNotification({message: `Updated ${columnField} successfully`, type: 'success'});
         }).catch(error => {
             setNotification({message: `Failed to update ${columnField}: ${error}`, type: 'error'});
 
         });
     };
-    const onCourseChange = (e) => {
-        setDialogState({
-            ...dialogState,
-            newEnrollment: {
-                ...dialogState.newEnrollment,
-                courseId: coursesOptions.find(course => course.name === e.target.value).id,
-                courseName: e.target.value
-            }
-        });
+    const showHistory = (field) => {
+        setSelectedField(field);
+        axios.get(apiEndpoints.courseHistoryByCourseIdAndField(course.id, field))
+            .then(response => {
+                setHistory(response.data.response);
+                setHistoryVisible(true);
+            })
+            .catch(error => setNotification({message: 'Failed to fetch history ' + error, type: 'error'}));
+    };
+
+    const openDialog = () => {
+        setDialogState({...dialogState, visible: true});
     }
 
-    //enrollment handlers
+    const closeDialog = () => {
+        setDialogState({...dialogState, visible: false});
+    }
     const onEdit = (id, columnField, editedValue) => {
         setEditingEnrollmentState({id, columnField, editedValue});
     };
@@ -165,10 +184,10 @@ const ClientDetails = () => {
     };
     const onDropDownChange = (e, columnField) => {
         switch (columnField) {
-            case 'course':
+            case 'client':
                 setEditingEnrollmentState({
                     ...editingEnrollmentState,
-                    editedValue: coursesOptions.find(option => option.status === e.target.value)
+                    editedValue: clientOptions.find(option => option.status === e.target.value)
                 });
                 break;
             case 'referralSource':
@@ -208,16 +227,16 @@ const ClientDetails = () => {
     };
     const dropDownCellHandlers = {
         onEdit, onSubmitEdit, onCancelEdit, onOptionChange: onDropDownChange
-    }
+    };
 
     const columns = [
         {
-            field: 'course',
-            header: 'Course',
+            field: 'client',
+            header: 'Client',
             filter: true,
             listFieldName: 'name',
             sortable: true,
-            body: (rowData) => DropDownCellTemplate(rowData, 'course', 'name', editingEnrollmentState, coursesOptions, dropDownCellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'client', 'name', editingEnrollmentState, clientOptions, dropDownCellHandlers)
         },
         {
             field: 'amountPaid',
@@ -343,45 +362,164 @@ const ClientDetails = () => {
         }
     ];
 
+    const onEditCourseLecturer = (id, columnField, editedValue) => {
+        setEditingCourseLecturerState({id, columnField, editedValue});
+    }
 
-    const openDialog = () => {
-        setDialogState({visible: true, newEnrollment: {}});
+    const onCancelEditCourseLecturer = () => {
+        setEditingCourseLecturerState({id: '', columnField: '', editedValue: null});
+    }
+
+    const onCellChangeCourseLecturer = (e) => {
+        setEditingCourseLecturerState({...editingCourseLecturerState, editedValue: e.target.value});
+    }
+
+    const onSubmitEditCourseLecturer = async (courseLecturerId, columnField) => {
+        const endpoint = columnField === 'paidInPercentage' ? apiEndpoints.updateCourseLecturerPaidStatus(courseLecturerId, editingCourseLecturerState.editedValue) : apiEndpoints.updateCourseLecturerField(courseLecturerId, columnField);
+        const payload = {[columnField]: editingCourseLecturerState.editedValue};
+        axios.patch(endpoint, payload).then(() => {
+            fetchCourseLecturers();
+            onCancelEditCourseLecturer();
+            setNotification({message: `Updated ${columnField} successfully`, type: 'success'});
+        }).catch(error => {
+            setNotification({message: `Failed to update ${columnField}: ${error}`, type: 'error'});
+        });
+    }
+
+
+    const courseLecturersCellHandlers = {
+        onEdit: onEditCourseLecturer,
+        onSubmitEdit: onSubmitEditCourseLecturer,
+        onCancelEdit: onCancelEditCourseLecturer,
+        onCellChange: onCellChangeCourseLecturer
     };
 
-    const closeDialog = () => {
-        setDialogState({visible: false, newEnrollment: {}});
-    };
+    const courseLecturersColumns = [
+        {
+            field: 'name',
+            header: 'Lecturer',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'name', editingCourseLecturerState, courseLecturersCellHandlers)
+        },
+        {
+            field: 'paidInPercentage',
+            header: 'Paid In Percentage',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'paidInPercentage', editingCourseLecturerState, courseLecturersCellHandlers)
+        },
+        {
+            field: 'percentage',
+            header: 'Percentage',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'percentage', editingCourseLecturerState, courseLecturersCellHandlers)
+        },
+        {
+            field: 'fixedValue',
+            header: 'Fixed Value',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'fixedValue', editingCourseLecturerState, courseLecturersCellHandlers)
+        },
+        {
+            field: 'createdDate',
+            header: 'Created Date',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate({
+                ...rowData,
+                createdDate: simplifyDate(rowData.createdDate)
+            }, 'createdDate', editingCourseLecturerState, courseLecturersCellHandlers, false)
+        },
+        {
+            field: 'createdBy',
+            header: 'Created By',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'createdBy', editingCourseLecturerState, courseLecturersCellHandlers, false)
+        },
+        {
+            field: 'modifiedDate',
+            header: 'Modified Date',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate({
+                ...rowData,
+                modifiedDate: simplifyDate(rowData.modifiedDate)
+            }, 'modifiedDate', editingCourseLecturerState, courseLecturersCellHandlers, false)
+        },
+        {
+            field: 'modifiedBy',
+            header: 'Modified By',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'modifiedBy', editingCourseLecturerState, courseLecturersCellHandlers, false)
+        }
+    ]
+
+    const onClientChange = (e) => {
+        setDialogState({
+            ...dialogState,
+            newEnrollment: {
+                ...dialogState.newEnrollment, clientName: e.target.value,
+                clientId: clientOptions.find(option => option.name === e.target.value).id
+            }
+        });
+    }
 
     const createEnrollment = () => {
         axios.post(apiEndpoints.createEnrollment, {
-            clientId: Number(id),
-            courseId: dialogState.newEnrollment.courseId,
+            courseId: Number(id),
+            clientId: dialogState.newEnrollment.clientId,
         }).then(response => {
             setNotification({message: 'Enrollment created successfully', type: 'success'});
             fetchEnrollments();
-            closeDialog();
+            closeLecturerDialog();
         }).catch(error => {
             setNotification({message: 'Failed to create enrollment' + error, type: 'error'});
         });
     };
 
-    const showHistory = (field) => {
-        setSelectedField(field);
-        setHistoryVisible(true);
-        axios.get(apiEndpoints.clientHistoryByClientIdAndField(id, field))
-            .then(response => setHistory(response.data.response))
-            .catch(error => setNotification({message: 'Failed to fetch history' + error, type: 'error'}));
-    };
+    const openLecturerDialog = () => {
+        setLecturerDialogState({...lecturerDialogState, visible: true});
+    }
 
-    if (!client) {
-        return <div>Loading client data...</div>;
+    const closeLecturerDialog = () => {
+        setLecturerDialogState({...lecturerDialogState, visible: false});
+    }
+
+    const createLecturer = () => {
+        axios.post(apiEndpoints.createCourseLecturer, {
+            courseId: Number(id),
+            name: lecturerDialogState.newLecturer.name,
+        }).then(response => {
+            setNotification({message: 'Lecturer created successfully', type: 'success'});
+            fetchCourseLecturers();
+            closeDialog();
+        }).catch(error => {
+            setNotification({message: 'Failed to create enrollment' + error, type: 'error'});
+        });
+    }
+    const onLecturerChange = (e) => {
+        setLecturerDialogState({
+            ...lecturerDialogState,
+            newLecturer: {
+                ...lecturerDialogState.newLecturer, name: e.target.value
+            }
+        });
+    }
+
+    if (!course) {
+        return <div>Loading course data...</div>;
     }
     return (
         <>
             <Card className="p-m-4" title="Client Details">
                 <div className="p-d-flex p-ai-center p-mb-3">
                     <Avatar label="JD" className="p-mr-3" size="large" shape="circle"/>
-                    <h2>{client.name}</h2>
+                    <h2>{course.name}</h2>
                 </div>
                 <div className="p-fluid">
                     {/* Name Field */}
@@ -389,7 +527,7 @@ const ClientDetails = () => {
                         <label htmlFor="name" className="p-mr-2">Name</label>
                         <InputText
                             id="name"
-                            value={client.name || ''}
+                            value={course.name || ''}
                             onChange={(e) => handleInputChange(e, 'name')}
                             className="p-mr-2"
                         />
@@ -407,95 +545,115 @@ const ClientDetails = () => {
                         />
                     </div>
 
-                    {/* Email Field */}
+                    {/* part Field */}
                     <div className="p-field p-d-flex p-ai-center">
-                        <label htmlFor="email" className="p-mr-2">Email</label>
+                        <label htmlFor="part" className="p-mr-2">Part</label>
                         <InputText
-                            id="email"
-                            value={client.email || ''}
-                            onChange={(e) => handleInputChange(e, 'email')}
+                            id="part"
+                            value={course.part || ''}
+                            onChange={(e) => handleInputChange(e, 'part')}
                             className="p-mr-2"
                         />
                         <Button
                             label="Save"
                             icon="pi pi-check"
-                            onClick={() => handleSave('email')}
+                            onClick={() => handleSave('part')}
                             className="p-button-sm p-mr-2"
                         />
                         <Button
                             label="Show History"
                             icon="pi pi-clock"
-                            onClick={() => showHistory('email')}
+                            onClick={() => showHistory('part')}
                             className="p-button-sm p-button-secondary"
                         />
                     </div>
 
-                    {/* Phone Field */}
+                    {/* code Field */}
                     <div className="p-field p-d-flex p-ai-center">
-                        <label htmlFor="phone" className="p-mr-2">Phone</label>
+                        <label htmlFor="code" className="p-mr-2">Code</label>
                         <InputText
                             id="phone"
-                            value={client.phone || ''}
-                            onChange={(e) => handleInputChange(e, 'phone')}
+                            value={course.code || ''}
+                            onChange={(e) => handleInputChange(e, 'code')}
                             className="p-mr-2"
                         />
                         <Button
                             label="Save"
                             icon="pi pi-check"
-                            onClick={() => handleSave('phone')}
+                            onClick={() => handleSave('code')}
                             className="p-button-sm p-mr-2"
                         />
                         <Button
                             label="Show History"
                             icon="pi pi-clock"
-                            onClick={() => showHistory('phone')}
+                            onClick={() => showHistory('code')}
+                            className="p-button-sm p-button-secondary"
+                        />
+                    </div>
+                    {/* price Field */}
+                    <div className="p-field p-d-flex p-ai-center">
+                        <label htmlFor="code" className="p-mr-2">Price</label>
+                        <InputText
+                            id="phone"
+                            value={course.price || ''}
+                            onChange={(e) => handleInputChange(e, 'price')}
+                            className="p-mr-2"
+                        />
+                        <Button
+                            label="Save"
+                            icon="pi pi-check"
+                            onClick={() => handleSave('price')}
+                            className="p-button-sm p-mr-2"
+                        />
+                        <Button
+                            label="Show History"
+                            icon="pi pi-clock"
+                            onClick={() => showHistory('price')}
+                            className="p-button-sm p-button-secondary"
+                        />
+                    </div>
+                    {/* Start Date Field */}
+                    <div className="p-field p-d-flex p-ai-center">
+                        <label htmlFor="startDate" className="p-mr-2">Start Date</label>
+                        <InputText
+                            id="startDate"
+                            value={course.startDate || ''}
+                            onChange={(e) => handleInputChange(e, 'startDate')}
+                            className="p-mr-2"
+                        />
+                        <Button
+                            label="Save"
+                            icon="pi pi-check"
+                            onClick={() => handleSave('startDate')}
+                            className="p-button-sm p-mr-2"
+                        />
+                        <Button
+                            label="Show History"
+                            icon="pi pi-clock"
+                            onClick={() => showHistory('startDate')}
                             className="p-button-sm p-button-secondary"
                         />
                     </div>
 
-                    {/* Alternative Phone Field */}
+                    {/* End Date Field */}
                     <div className="p-field p-d-flex p-ai-center">
-                        <label htmlFor="phone" className="p-mr-2">Alternative Phone</label>
+                        <label htmlFor="country" className="p-mr-2">End Date</label>
                         <InputText
                             id="alternative-phone"
-                            value={client.alternativePhone || ''}
-                            onChange={(e) => handleInputChange(e, 'alternativePhone')}
+                            value={course.endDate || ''}
+                            onChange={(e) => handleInputChange(e, 'endDate')}
                             className="p-mr-2"
                         />
                         <Button
                             label="Save"
                             icon="pi pi-check"
-                            onClick={() => handleSave('alternativePhone')}
+                            onClick={() => handleSave('endDate')}
                             className="p-button-sm p-mr-2"
                         />
                         <Button
                             label="Show History"
                             icon="pi pi-clock"
-                            onClick={() => showHistory('alternativePhone')}
-                            className="p-button-sm p-button-secondary"
-                        />
-                    </div>
-
-
-                    {/* Country Field */}
-                    <div className="p-field p-d-flex p-ai-center">
-                        <label htmlFor="country" className="p-mr-2">Country</label>
-                        <InputText
-                            id="alternative-phone"
-                            value={client.country || ''}
-                            onChange={(e) => handleInputChange(e, 'country')}
-                            className="p-mr-2"
-                        />
-                        <Button
-                            label="Save"
-                            icon="pi pi-check"
-                            onClick={() => handleSave('country')}
-                            className="p-button-sm p-mr-2"
-                        />
-                        <Button
-                            label="Show History"
-                            icon="pi pi-clock"
-                            onClick={() => showHistory('country')}
+                            onClick={() => showHistory('endDate')}
                             className="p-button-sm p-button-secondary"
                         />
                     </div>
@@ -508,7 +666,12 @@ const ClientDetails = () => {
                     history={history}
                     field={selectedField}/>
             </Card>
+
             <h2>Enrollments</h2>
+            {/*<Table></Table>*/}
+
+
+            {/*<Table></Table>*/}
             <Table data={enrollments} columns={columns} paginatorLeftHandlers={fetchEnrollments}
                    downloadFileName={'enrollments'}
                    setNotification={setNotification}
@@ -533,12 +696,12 @@ const ClientDetails = () => {
                 <Card title="Enrollment Details">
                     <div className="p-fluid">
                         <div className="p-field">
-                            <label htmlFor="course">Name</label>
-                            <Dropdown id="course"
-                                      value={dialogState.newEnrollment?.courseName}
-                                      options={coursesOptions.map(course => course.name)}
-                                      placeholder="Select a course"
-                                      onChange={onCourseChange}
+                            <label htmlFor="client">Client Name</label>
+                            <Dropdown id="client"
+                                      value={dialogState.newEnrollment?.clientName}
+                                      options={clientOptions.map(client => client.name)}
+                                      placeholder="Select a client"
+                                      onChange={onClientChange}
                             />
                         </div>
 
@@ -551,11 +714,47 @@ const ClientDetails = () => {
                 </Card>
             </Dialog>
 
+            <h2>Lecturers</h2>
+            <Table
+                columns={courseLecturersColumns} data={courseLecturers} paginatorLeftHandlers={fetchCourseLecturers}
+            ></Table>
+
+            <Button
+                icon="pi pi-plus"
+                className="p-button-rounded p-button-primary"
+                style={{position: 'fixed', marginTop: '200px', bottom: '16px', right: '300px', zIndex: 1000}}
+                onClick={openLecturerDialog}
+                label="New Lecturer"
+            />
+            <Dialog
+                header="Create New Lecturer"
+                visible={lecturerDialogState.visible}
+                style={{width: '50vw'}}
+                modal
+                onHide={closeLecturerDialog}
+            >
+                <Card title="Enrollment Details">
+                    <div className="p-fluid">
+                        <div className="p-field">
+                            <label htmlFor="client">Name</label>
+                            <InputText id="client"
+                                       value={lecturerDialogState.newLecturer?.name}
+                                       placeholder="enter lectuer's name"
+                                       onInput={onLecturerChange}
+                            />
+                        </div>
+
+                        <div className="p-d-flex p-jc-end">
+                            <Button label="Save" icon="pi pi-check" onClick={createLecturer} className="p-mr-2"/>
+                            <Button label="Cancel" icon="pi pi-times" onClick={closeLecturerDialog}
+                                    className="p-button-secondary"/>
+                        </div>
+                    </div>
+                </Card>
+            </Dialog>
+
             <Notification status={notification.type} message={notification.message}/>
-
         </>
-
     );
-};
-
-export default ClientDetails;
+}
+export default CourseDetails;

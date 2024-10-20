@@ -1,72 +1,263 @@
-import {useEffect, useState} from 'react';
-import {BASE_URL} from "../constants.js";
+import React, {useEffect, useState} from 'react';
 import useAxios from "../useAxios.js";
-import {DataTable} from 'primereact/datatable';
-import {Column} from 'primereact/column';
 import {Button} from 'primereact/button';
-// import 'primereact/resources/themes/lara-light-indigo/theme.css'; // You can change the theme here
-// import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css'; // For using icons
+import apiEndpoints from "../apiEndpoints.js";
+import Notification from "../components/Notification.jsx";
+import {Dialog} from "primereact/dialog";
+import {Card} from "primereact/card";
+import {InputText} from "primereact/inputtext";
+import Table from "../components/Table.jsx";
+import CellTemplate from "../templates/CellTemplate.jsx";
+import {simplifyDate} from "../utils.js";
+import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
+import {useNavigate} from "react-router-dom";
 
 function Courses() {
-    const columns = [
-        {name: 'Code', selector: row => row.code},
-        {name: 'Part', selector: row => row.part},
-        {name: 'Name', selector: row => row.name},
-        {name: 'Price', selector: row => row.price},
-        {name: 'Status', selector: row => row.courseStatus ? row.courseStatus.status : 'N/A'},
-        {name: 'Start Date', selector: row => row.startDate},
-        {name: 'End Date', selector: row => row.endDate},
-    ];
 
+    const [editingState, setEditingState] = useState({id: '', columnField: '', editedValue: null});
     const [courses, setCourses] = useState([]);
+    const [newCourse, setNewCourse] = useState({});
+    const [courseStatusOptions, setCourseStatusOptions] = useState([]);
+    const [notification, setNotification] = useState({message: '', type: ''});
+    const [displayDialog, setDisplayDialog] = useState(false);
     const axios = useAxios();
+    const navigate = useNavigate();
+
+
+    const fetchCourseStatusOptions = () => {
+        axios.get(apiEndpoints.courseStatuses).then(response => {
+            console.log(response.data.response);
+            setCourseStatusOptions(response.data.response);
+        }).catch(error => setNotification({message: 'Failed to fetch course options ' + error, type: 'error'}))
+        ;
+    }
+    const fetchCourses = () => {
+        axios.get(apiEndpoints.courses).then(response => {
+            setCourses(response.data.response);
+        }).catch(error =>
+            setNotification({message: 'Failed to fetch courses ' + error, type: 'error'})
+        );
+    }
+
 
     useEffect(() => {
-
-        //TODO: WILL ADD THE PAGINATED API LATER
-
-        // axios.post(BASE_URL + 'client/find-paginated-and-filtered', {
-        //     pageNumber: 1,
-        //     pageSize: 250,
-        //     deletedRecords: false,
-        //     sortBy: "name",
-        //     sortDesc: true
-        // }).then(response => {
-        //     setClients(response.data.response.result);
-        // }).catch(error => console.log(error));
-
-        axios.get(BASE_URL + 'course/all').then(response => {
-            setCourses(Array.isArray(response.data.response) ? response.data.response : []);
-        }).catch(error => console.log(error));
-
-
+        fetchCourses();
+        fetchCourseStatusOptions();
     }, []);
 
-    const paginatorLeft = <Button type="button" icon="pi pi-refresh" text/>;
-    const paginatorRight = <Button type="button" icon="pi pi-download" text/>;
+    const openDialog = () => {
+        setDisplayDialog(true);
+    };
+
+    const closeDialog = () => {
+        setDisplayDialog(false);
+        setNewCourse({});
+    };
+    const createCourse = () => {
+        closeDialog();
+        axios.post(apiEndpoints.createCourse, newCourse)
+            .then(() => {
+                fetchCourses();
+                setNotification({message: 'Client created successfully', type: 'success'});
+
+            }).catch(error => setNotification({message: `Failed to create client: ${error}`, type: 'error'}));
+
+
+    }
+
+    const onEdit = (id, columnField, editedValue) => {
+        setEditingState({id, columnField, editedValue});
+    };
+    const onCancelEdit = () => {
+        setEditingState({id: '', columnField: '', editedValue: null});
+    };
+    const onCellChange = (e) => {
+        setEditingState({...editingState, editedValue: e.target.value});
+    };
+
+    const onSubmitEdit = async (clientId, columnField) => {
+        const endpoint = apiEndpoints.getCourseUpdateEndpoint(clientId, columnField, editingState.editedValue.id);
+        if (editingState.editedValue !== '' && (columnField === 'startDate' || columnField === 'endDate')) {
+            editingState.editedValue = new Date(editingState.editedValue).toISOString();
+        }
+        const payload = {[columnField]: editingState.editedValue};
+        axios.patch(endpoint, payload).then(() => {
+            fetchCourses();
+            onCancelEdit();
+            setNotification({message: `Updated ${columnField} successfully`, type: 'success'});
+        }).catch(error =>
+            setNotification({message: `Failed to update ${columnField}: ${error}`, type: 'error'})
+        );
+
+    };
+    const onDropDownChange = (e, columnField) => {
+        switch (columnField) {
+            case 'courseStatus':
+                setEditingState({
+                    ...editingState,
+                    editedValue: courseStatusOptions.find(option => option.status === e.target.value)
+                });
+                break;
+        }
+
+    };
+
+
+    const cellHandlers = {
+        onEdit, onSubmitEdit, onCancelEdit, onCellChange
+    };
+    const dropDownCellHandlers = {
+        onEdit, onSubmitEdit, onCancelEdit, onOptionChange: onDropDownChange
+    }
+
+    const columns = [
+        {
+            field: 'code',
+            header: 'Code',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'code', editingState, cellHandlers)
+        },
+        {
+            field: 'name',
+            header: 'Name',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'name', editingState, cellHandlers)
+        },
+        {
+            field: 'part',
+            header: 'Part',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'part', editingState, cellHandlers)
+        },
+        {
+            field: 'price',
+            header: 'Price',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'price', editingState, cellHandlers)
+        },
+        {
+            field: 'courseStatus',
+            header: 'Status',
+            listFieldName: 'status',
+            filter: true,
+            sortable: true,
+            body: (rowData) => DropDownCellTemplate(rowData, 'courseStatus', 'status', editingState, courseStatusOptions, dropDownCellHandlers)
+        },
+        {
+            field: 'startDate',
+            header: 'Start Date',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'startDate', editingState, cellHandlers)
+        },
+        {
+            field: 'endDate',
+            header: 'End Date',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'endDate', editingState, cellHandlers)
+        },
+        {
+            field: 'createdDate',
+            header: 'Created Date',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate({
+                ...rowData,
+                createdDate: simplifyDate(rowData.modifiedDate)
+            }, 'createdDate', editingState, cellHandlers, false)
+        },
+        {
+            field: 'modifiedDate',
+            header: 'Modified Date',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate({
+                ...rowData,
+                modifiedDate: simplifyDate(rowData.modifiedDate)
+            }, 'modifiedDate', editingState, cellHandlers, false)
+        },
+        {
+            field: 'createdBy',
+            header: 'Created By',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'createdBy', editingState, cellHandlers, false)
+        },
+        {
+            field: 'modifiedBy',
+            header: 'Modified By',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'modifiedBy', editingState, cellHandlers, false)
+        }
+
+
+    ]
+    const onRowClick = (course) => {
+        navigate(`/course/${course.id}`, {state: {course}});
+
+    }
 
     return (
         <div style={{padding: '16px'}}>
-            <DataTable
-                value={courses}
-                paginator
-                rows={10}
-                rowsPerPageOptions={[5, 10, 20]}
-                width="80%"
-                paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
-                currentPageReportTemplate="{first} to {last} of {totalRecords}"
-                paginatorLeft={paginatorLeft}
-                paginatorRight={paginatorRight}
-                showGridlines={true}
-                stripedRows
-                style={{border: '1px solid #d9d9d9', borderRadius: '8px'}}
-                className="p-datatable-table"  // Use smaller table rows
+            <Table
+                columns={columns} data={courses} onRowClick={onRowClick} setNotification={setNotification}
+                paginatorLeftHandlers={{fetchCourses, fetchCourseOptions: fetchCourseStatusOptions}}
+                downloadFileName="courses"
             >
-                {columns.map((col, index) => (
-                    <Column key={index} field={col.selector} header={col.name} filter  />
-                ))}
-            </DataTable>
+            </Table>
+            <Button
+                icon="pi pi-plus"
+                className="p-button-rounded p-button-primary"
+                style={{position: 'fixed', marginTop: '200px', bottom: '16px', right: '16px', zIndex: 1000}}
+                onClick={openDialog}
+                label="New Course"
+            />
+            <Dialog
+                header="Create New Client"
+                visible={displayDialog}
+                style={{width: '50vw'}}
+                modal
+                onHide={closeDialog}
+            >
+                <Card title="Client Details">
+                    <div className="p-fluid">
+                        <div className="p-field">
+                            <label htmlFor="name">Name</label>
+                            <InputText id="name"
+                                       onInput={(e) => setNewCourse({...newCourse, name: e.target.value})}/>
+                        </div>
+                        <div className="p-field">
+                            <label htmlFor="code">Code</label>
+                            <InputText id="code"
+                                       onInput={(e) => setNewCourse({...newCourse, code: e.target.value})}/>
+                        </div>
+                        <div className="p-field">
+                            <label htmlFor="part">Part</label>
+                            <InputText id="part"
+                                       onInput={(e) => setNewCourse({...newCourse, part: e.target.value})}/>
+                        </div>
+                        <div className="p-field">
+                            <label htmlFor="price">Price</label>
+                            <InputText id="price"
+                                       onInput={(e) => setNewCourse({...newCourse, price: e.target.value})}/>
+                        </div>
+
+                        <div className="p-d-flex p-jc-end">
+                            <Button label="Save" icon="pi pi-check" onClick={createCourse} className="p-mr-2"/>
+                            <Button label="Cancel" icon="pi pi-times" onClick={closeDialog}
+                                    className="p-button-secondary"/>
+                        </div>
+                    </div>
+                </Card>
+            </Dialog>
+            <Notification status={notification.type} message={notification.message}/>
         </div>
     );
 }

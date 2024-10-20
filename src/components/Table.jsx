@@ -16,10 +16,18 @@ const Table = ({
 
                }) => {
 
+    const handleRefresh = () => {
+        Object.keys(paginatorLeftHandlers).forEach(handler => {
+            if (typeof paginatorLeftHandlers[handler] === 'function') {
+                paginatorLeftHandlers[handler]();
+            }
+        });
+        setNotification({message: 'Data refreshed successfully', type: 'success'});
+    };
+
     const paginatorLeft = (
         <Button type="button" icon="pi pi-refresh" text onClick={() => {
-            paginatorLeftHandlers.fetchClients();
-            paginatorLeftHandlers.fetchStatusOptions();
+            handleRefresh();
 
             setNotification({message: 'Data refreshed successfully', type: 'success'});
         }}/>

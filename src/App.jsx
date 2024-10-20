@@ -10,6 +10,7 @@ import Installments from "./pages/Installments.jsx";
 import Sales from "./pages/Sales.jsx";
 import Refunds from "./pages/Refunds.jsx";
 import Clients from "./pages/Clients.jsx";
+import CourseDetails from "./pages/CourseDetails.jsx";
 
 
 function App() {
@@ -28,6 +29,8 @@ function App() {
                             <Route path="/sales" element={<PrivateRoute><Sales/> </PrivateRoute>}/>
                             <Route path="/refunds" element={<PrivateRoute><Refunds/> </PrivateRoute>}/>
                             <Route path="/client/:id" element={<PrivateRoute><ClientDetails/> </PrivateRoute>}/>
+                            <Route path="/course/:id" element={<PrivateRoute><CourseDetails/> </PrivateRoute>}/>
+
                         </Routes>
                     </div>
                 </div>

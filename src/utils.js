@@ -7,6 +7,11 @@ export function simplifyDate(date) {
     return new Date(date).toLocaleString();
 }
 
+export function formatDateToLocalDateTime(userInputDate) {
+    return userInputDate + "T00:00:00";  // Defaulting time to 00:00:00
+
+}
+
 export const downloadCSV = (data, columns, name) => {
     const headers = columns.map(col => col.header);
     const rows = data.map(client => columns.map(col => {

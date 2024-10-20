@@ -2,16 +2,17 @@ import {Button} from "primereact/button";
 import {Dropdown} from "primereact/dropdown";
 
 const DropDownCellTemplate = (rowData, columnField, listFieldName, editingState, listOptions,
-                              handlers, isEditable = true) => {
-    const isEditing = editingState.clientId === rowData.id && editingState.columnField === columnField;
-
+                              handlers, nestedField = '', isEditable = true) => {
+    const isEditing = editingState.id === rowData.id && editingState.columnField === columnField;
     return (
         <div style={{display: 'flex', alignItems: 'center'}}>
             {isEditing ? (
                 <>
                     <Dropdown
-                        value={editingState.editedValue ? editingState.editedValue[listFieldName] : null}
-                        options={listOptions.map(e => e[listFieldName])}
+                        value={editingState.editedValue ? nestedField !== '' ? editingState.editedValue[listFieldName][nestedField] : editingState.editedValue[listFieldName] : null}
+                        options={listOptions.map(e => {
+                            return nestedField !== '' ? e[listFieldName][nestedField] : e[listFieldName]
+                        })}
                         onChange={e => handlers.onOptionChange(e, columnField)}
                         optionLabel="name"
                         style={{marginRight: '8px'}}
@@ -27,7 +28,7 @@ const DropDownCellTemplate = (rowData, columnField, listFieldName, editingState,
             ) : (
                 <>
                     <span
-                        className="cell-content">{rowData[columnField] ? rowData[columnField][listFieldName] : null}</span>
+                        className="cell-content">{rowData[columnField] ? nestedField !== '' ? rowData[columnField][listFieldName][nestedField] : rowData[columnField][listFieldName] : null}</span>
                     {isEditable && (
                         <Button icon="pi pi-pencil" className="p-button-text p-button-secondary"
                                 style={{marginLeft: '8px'}}

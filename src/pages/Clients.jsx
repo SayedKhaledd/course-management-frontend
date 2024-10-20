@@ -18,7 +18,7 @@ import {simplifyDate} from "../utils.js";
 function Clients() {
     const [clients, setClients] = useState([]);
     const [newClient, setNewClient] = useState({});
-    const [editingState, setEditingState] = useState({clientId: '', columnField: '', editedValue: null});
+    const [editingState, setEditingState] = useState({id: '', columnField: '', editedValue: null});
     const [statusOptions, setStatusOptions] = useState([]);
     const [referralSourceOptions, setReferralSourceOptions] = useState([]);
     const axios = useAxios();
@@ -60,11 +60,11 @@ function Clients() {
         fetchReferralSourceOptions();
     }, []);
 
-    const onEdit = (clientId, columnField, editedValue) => {
-        setEditingState({clientId, columnField, editedValue});
+    const onEdit = (id, columnField, editedValue) => {
+        setEditingState({id, columnField, editedValue});
     };
     const onCancelEdit = () => {
-        setEditingState({clientId: '', columnField: '', editedValue: null});
+        setEditingState({id: '', columnField: '', editedValue: null});
     };
     const onCellChange = (e) => {
         setEditingState({...editingState, editedValue: e.target.value});

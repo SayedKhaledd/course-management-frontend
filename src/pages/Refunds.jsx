@@ -1,80 +1,285 @@
-import {useEffect, useState} from 'react';
-import {BASE_URL} from "../constants.js";
+import React, {useEffect, useState} from 'react';
 import useAxios from "../useAxios.js";
-import {DataTable} from 'primereact/datatable';
-import {Column} from 'primereact/column';
-import {Button} from 'primereact/button';
-// import 'primereact/resources/themes/lara-light-indigo/theme.css'; // You can change the theme here
-// import 'primereact/resources/primereact.min.css';
-import 'primeicons/primeicons.css'; // For using icons
+
+import 'primeicons/primeicons.css';
+import Notification from "../components/Notification.jsx";
+import Table from "../components/Table.jsx";
+import apiEndpoints from "../apiEndpoints.js";
+import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
+import CellTemplate from "../templates/CellTemplate.jsx";
+import {Button} from "primereact/button";
+import {Dialog} from "primereact/dialog";
+import {Card} from "primereact/card";
+import {Dropdown} from "primereact/dropdown";
+import {InputText} from "primereact/inputtext"; // For using icons
 
 function Refunds() {
+    const [refunds, setRefunds] = useState([]);
+    const [editingState, setEditingState] = useState({id: '', columnField: '', editedValue: null});
+    const [clientOptions, setClientOptions] = useState([]);
+    const [courseOptions, setCourseOptions] = useState([]);
+    const [paymentMethodOptions, setPaymentMethodOptions] = useState([]);
+    const [refundReasonOptions, setRefundReasonOptions] = useState([]);
+    const axios = useAxios();
+    const [notification, setNotification] = useState({message: '', type: ''});
+    const [displayDialog, setDisplayDialog] = useState(false);
+    const [newRefund, setNewRefund] = useState({});
+
+
+    const fetchRefunds = () => {
+        axios.get(apiEndpoints.refunds).then(response => {
+            setRefunds(response.data.response);
+        }).catch(error => setNotification({message: 'Failed to fetch refunds ' + error, type: 'error'}));
+    }
+    const fetchClientOptions = () => {
+        axios.get(apiEndpoints.clients).then(response => {
+            setClientOptions(response.data.response);
+        }).catch(error => setNotification({message: 'Failed to fetch client options ' + error, type: 'error'}));
+    }
+    const fetchCourseOptions = () => {
+        axios.get(apiEndpoints.courses).then(response => {
+            setCourseOptions(response.data.response);
+        }).catch(error => setNotification({message: 'Failed to fetch course options ' + error, type: 'error'}));
+    }
+    const fetchPaymentMethodOptions = () => {
+        axios.get(apiEndpoints.paymentMethods).then(response => {
+            setPaymentMethodOptions(response.data.response);
+        }).catch(error => setNotification({message: 'Failed to fetch payment method options ' + error, type: 'error'}));
+    }
+    const fetchRefundReasonOptions = () => {
+        axios.get(apiEndpoints.refundReasons).then(response => {
+            setRefundReasonOptions(response.data.response);
+        }).catch(error => setNotification({message: 'Failed to fetch refund reason options ' + error, type: 'error'}));
+    }
+
+
+    const onEdit = (id, columnField, editedValue) => {
+        setEditingState({id, columnField, editedValue});
+    }
+
+    const onCancelEdit = () => {
+        setEditingState({id: '', columnField: '', editedValue: null});
+    }
+
+    const onCellChange = (e) => {
+        setEditingState({...editingState, editedValue: e.target.value});
+    }
+
+    const onDropDownChange = (e, columnField) => {
+        switch (columnField) {
+            case 'paymentMethod':
+                setEditingState({
+                    ...editingState,
+                    editedValue: paymentMethodOptions.find(option => option.method === e.target.value)
+                });
+                break;
+
+            case 'refundReason':
+                setEditingState({
+                    ...editingState,
+                    editedValue: refundReasonOptions.find(option => option.reason === e.target.value)
+                });
+                break;
+        }
+
+    }
+
+    const onSubmitEdit = (id, columnField) => {
+        const endpoint = columnField === 'isConfirmed' ? apiEndpoints.updateRefundIsConfirmed(id, editingState.editedValue) : apiEndpoints.getRefundUpdateEndpoint(id, columnField, editingState.editedValue.id);
+        if (editingState.editedValue !== '' && (columnField === 'refundDate')) {
+            editingState.editedValue = new Date(editingState.editedValue).toISOString();
+        }
+
+
+        const payload = {[columnField]: editingState.editedValue};
+        axios.patch(endpoint, payload).then(() => {
+            fetchRefunds();
+            onCancelEdit();
+            setNotification({message: `Updated ${columnField} successfully`, type: 'success'});
+
+        }).catch(error =>
+            setNotification({message: `Failed to update ${columnField}: ${error}`, type: 'error'})
+        );
+    }
+
+    const handlers = {
+        onEdit, onSubmitEdit, onCancelEdit, onCellChange
+    };
+    const dropDownCellHandlers = {
+        onEdit, onSubmitEdit, onCancelEdit, onOptionChange: onDropDownChange
+    }
+
     const columns = [
         {
-            name: 'Client Name',
-            selector: row => row.enrollment ? row.enrollment.client ? row.enrollment.client.name : 'N/A' : 'N/A'
+            field: 'enrollment',
+            header: 'Client',
+            listFieldName: 'client',
+            nestedField: 'name',
+            filter: true,
+            sortable: true,
+            body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'client', editingState, clientOptions, dropDownCellHandlers, 'name')
         },
-        {name: 'Course Code', selector: row => row.enrollment?.course?.code},
-        {name: 'Course Name', selector: row => row.enrollment?.course?.name},
-        {name: 'Amount', selector: row => row.amount},
-        {name: 'Refund Date', selector: row => row.refundDate},
-        {name: 'Reason', selector: row => row.refundReason?.reason},
-        {name: 'Explanation', selector: row => row.explanation},
-        {name: 'Currency', selector: row => row.currency},
-        {name: 'Status', selector: row => row.paymentStatus?.status},
-        {name: 'Refund Method', selector: row => row.paymentMethod?.method},
 
-    ];
+        {
+            field: 'enrollment',
+            header: 'Course Name',
+            listFieldName: 'course',
+            nestedField: 'name',
+            filter: true,
+            sortable: true,
+            body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'course', editingState, courseOptions, dropDownCellHandlers, 'name')
+        },
+        {
+            field: 'amount',
+            header: 'Amount',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'amount', editingState, handlers)
+        },
+        {
+            field: 'refundDate',
+            header: 'Refund Date',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'refundDate', editingState, handlers)
+        },
+        {
+            field: 'refundReason',
+            header: 'Reason',
+            listFieldName: 'reason',
+            filter: true,
+            sortable: true,
+            body: (rowData) => DropDownCellTemplate(rowData, 'refundReason', 'refundReason', editingState, refundReasonOptions, dropDownCellHandlers,)
+        },
+        {
+            field: 'explanation',
+            header: 'Explanation',
+            filter: true,
+            sortable: true,
+            body: (rowData) => DropDownCellTemplate(rowData, 'explanation', 'explanation', editingState, [], handlers)
+        },
+        //is confirmed
+        {
+            field: 'isConfirmed',
+            header: 'Is Confirmed',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'isConfirmed', editingState, handlers)
+        },
+        //PAYMENT METHOD
+        {
+            field: 'paymentMethod',
+            header: 'Payment Method',
+            listFieldName: 'method',
+            filter: true,
+            sortable: true,
+            body: (rowData) => DropDownCellTemplate(rowData, 'paymentMethod', 'method', editingState, paymentMethodOptions, dropDownCellHandlers)
+        },
 
-    const [refunds, setRefunds] = useState([]);
-    const axios = useAxios();
+    ]
+
+    const openDialog = () => {
+        setDisplayDialog(true);
+    }
+
+    const closeDialog = () => {
+        setDisplayDialog(false);
+    }
+
+    const createRefund = () => {
+        axios.post(apiEndpoints.createRefund, newRefund).then(response => {
+            setNotification({message: 'Installment created successfully', type: 'success'});
+            fetchRefunds();
+            closeDialog();
+        }).catch(error => setNotification({message: 'Failed to create installment ' + error, type: 'error'}));
+    }
 
     useEffect(() => {
-
-        //TODO: WILL ADD THE PAGINATED API LATER
-
-        // axios.post(BASE_URL + 'client/find-paginated-and-filtered', {
-        //     pageNumber: 1,
-        //     pageSize: 250,
-        //     deletedRecords: false,
-        //     sortBy: "name",
-        //     sortDesc: true
-        // }).then(response => {
-        //     setClients(response.data.response.result);
-        // }).catch(error => console.log(error));
-
-        axios.get(BASE_URL + 'refunds/all').then(response => {
-            setRefunds(Array.isArray(response.data.response) ? response.data.response : []);
-        }).catch(error => console.log(error));
-
+        fetchRefunds();
+        fetchClientOptions();
+        fetchCourseOptions();
+        fetchPaymentMethodOptions();
+        fetchRefundReasonOptions();
 
     }, []);
 
-    const paginatorLeft = <Button type="button" icon="pi pi-refresh" text/>;
-    const paginatorRight = <Button type="button" icon="pi pi-download" text/>;
 
     return (
-        <div style={{padding: '16px'}}>
-            <DataTable
-                value={refunds}
-                paginator
-                rows={10}
-                rowsPerPageOptions={[5, 10, 20]}
-                width="80%"
-                paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
-                currentPageReportTemplate="{first} to {last} of {totalRecords}"
-                paginatorLeft={paginatorLeft}
-                paginatorRight={paginatorRight}
-                showGridlines={true}
-                stripedRows
-                style={{border: '1px solid #d9d9d9', borderRadius: '8px'}}
-                className="p-datatable-table"  // Use smaller table rows
+        <>
+            <Table
+                columns={columns}
+                data={refunds}
+                downloadFileName={'refunds'}
+                paginatorLeftHandlers={[fetchRefunds, fetchClientOptions, fetchCourseOptions, fetchPaymentMethodOptions, fetchRefundReasonOptions]}
+
+
+            ></Table>
+            <Button
+                icon="pi pi-plus"
+                className="p-button-rounded p-button-primary"
+                style={{position: 'fixed', marginTop: '200px', bottom: '16px', right: '16px', zIndex: 1000}}
+                onClick={openDialog}
+                label="New Refund"
+            />
+            <Dialog
+                header="Create New Refund"
+                visible={displayDialog}
+                style={{width: '50vw'}}
+                modal
+                onHide={closeDialog}
             >
-                {columns.map((col, index) => (
-                    <Column key={index} field={col.selector} header={col.name}/>
-                ))}
-            </DataTable>
-        </div>
+                <Card title="Refund Details">
+                    <div className="p-fluid">
+                        <div className="p-field">
+                            <label htmlFor="course">Course</label>
+                            <Dropdown id="course"
+                                      options={courseOptions.map(option => option.name)}
+                                      value={newRefund.enrollment?.courseName}
+                                      onChange={(e) => {
+                                          setNewRefund({
+                                              ...newRefund,
+                                              enrollment: {
+                                                  ...newRefund.enrollment,
+                                                  courseId: courseOptions.find(option => option.name === e.target.value).id,
+                                                  courseName: e.target.value
+                                              }
+                                          })
+
+                                      }
+                                      }/>
+                        </div>
+                        <div className="p-field">
+                            <label htmlFor="client">Client</label>
+                            <Dropdown id="client"
+                                      options={clientOptions.map(option => option.name)}
+                                      value={newRefund.enrollment?.clientName}
+                                      onChange={(e) => setNewRefund({
+                                          ...newRefund,
+                                          enrollment: {
+                                              ...newRefund.enrollment,
+                                              clientId: clientOptions.find(option => option.name === e.target.value).id,
+                                              clientName: e.target.value
+                                          }
+
+                                      })}/>
+                        </div>
+                        <div className="p-field">
+                            <label htmlFor="amount">amount</label>
+                            <InputText id="amount"
+                                       onInput={(e) => setNewRefund({...newRefund, amount: e.target.value})}/>
+                        </div>
+
+                        <div className="p-d-flex p-jc-end">
+                            <Button label="Save" icon="pi pi-check" onClick={createRefund} className="p-mr-2"/>
+                            <Button label="Cancel" icon="pi pi-times" onClick={closeDialog}
+                                    className="p-button-secondary"/>
+                        </div>
+                    </div>
+                </Card>
+            </Dialog>
+
+            <Notification message={notification.message} type={notification.type}/>
+        </>
     );
 }
 
