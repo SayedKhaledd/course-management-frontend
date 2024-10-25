@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import useAxios from "../useAxios.js";
+import useAxios from "../hooks/useAxios.js";
 import {Button} from 'primereact/button';
 import 'primeicons/primeicons.css'; // For using icons
 import apiEndpoints from "../apiEndpoints.js";
@@ -9,9 +9,10 @@ import {Card} from "primereact/card";
 import {InputText} from "primereact/inputtext";
 import Table from "../components/Table.jsx";
 import CellTemplate from "../templates/CellTemplate.jsx";
-import {simplifyDate} from "../utils.js";
+import {genericSortFunction, simplifyDate} from "../utils.js";
 import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import {useNavigate} from "react-router-dom";
+import {ConfirmDialog} from "primereact/confirmdialog";
 
 function Courses() {
 
@@ -23,6 +24,7 @@ function Courses() {
     const [displayDialog, setDisplayDialog] = useState(false);
     const axios = useAxios();
     const navigate = useNavigate();
+    const [confirmDeleteDialog, setConfirmDeleteDialog] = useState({visible: false, course: null});
 
 
     const fetchCourseStatusOptions = () => {
@@ -146,6 +148,7 @@ function Courses() {
             listFieldName: 'status',
             filter: true,
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'courseStatus', 'status'),
             body: (rowData) => DropDownCellTemplate(rowData, 'courseStatus', 'status', editingState, courseStatusOptions, dropDownCellHandlers)
         },
         {
@@ -153,6 +156,7 @@ function Courses() {
             header: 'Start Date',
             filter: true,
             sortable: true,
+
             body: (rowData) => CellTemplate(rowData, 'startDate', editingState, cellHandlers)
         },
         {
@@ -203,10 +207,26 @@ function Courses() {
         navigate(`/course/${course.id}`, {state: {course}});
 
     }
+    const onDeleteRow = (rowData) => {
+        setConfirmDeleteDialog({visible: true, course: rowData});
+    }
+    const deleteCourse = () => {
+        axios.delete(apiEndpoints.getCourseDeleteEndpoint(confirmDeleteDialog.course.id))
+            .then(() => {
+                fetchCourses();
+                setNotification({message: 'Client deleted successfully', type: 'success'});
+                setConfirmDeleteDialog({visible: false, course: null});
+            }).catch(error => setNotification({message: `Failed to delete client: ${error}`, type: 'error'}));
+    }
+    const cancelDeleteCourse = () => {
+        setConfirmDeleteDialog({visible: false, course: null});
+    }
 
     return (
         <div style={{padding: '16px'}}>
             <Table
+                header={'Courses'}
+                onDeleteRow={onDeleteRow}
                 columns={columns} data={courses} onRowClick={onRowClick} setNotification={setNotification}
                 paginatorLeftHandlers={{fetchCourses, fetchCourseOptions: fetchCourseStatusOptions}}
                 downloadFileName="courses"
@@ -257,6 +277,14 @@ function Courses() {
                     </div>
                 </Card>
             </Dialog>
+            <ConfirmDialog
+                visible={confirmDeleteDialog.visible}
+                reject={cancelDeleteCourse}
+                accept={deleteCourse}
+                header={`Delete ${confirmDeleteDialog.course ? confirmDeleteDialog.course.name : ''}`}
+                message={`Are you sure you want to delete ${confirmDeleteDialog.course ? confirmDeleteDialog.course.name : ''}?`}
+            >
+            </ConfirmDialog>
             <Notification status={notification.type} message={notification.message}/>
         </div>
     );

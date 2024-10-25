@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import useAxios from "../useAxios.js";
+import useAxios from "../hooks/useAxios.js";
 // import 'primereact/resources/themes/lara-light-indigo/theme.css'; // You can change the theme here
 // import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
@@ -108,6 +108,7 @@ function Sales() {
     return (
         <>
             <Table
+                header={'Sales'}
                 data={sales}
                 columns={columns}
                 paginatorLeftHandlers={[fetchSales]}

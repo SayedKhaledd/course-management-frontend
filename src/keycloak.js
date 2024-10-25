@@ -1,5 +1,5 @@
 import Keycloak from "keycloak-js";
-import {KEYCLOAK_URL} from "./constants.js";
+import {KEYCLOAK_URL} from "./apiEndpoints.js";
 
 
 const kc = new Keycloak({

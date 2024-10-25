@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import useAxios from "../useAxios.js";
+import useAxios from "../hooks/useAxios.js";
 import {Button} from 'primereact/button';
 import 'primeicons/primeicons.css';
 import '../styles/Clients.css';
@@ -12,7 +12,8 @@ import apiEndpoints from "../apiEndpoints.js";
 import CellTemplate from "../templates/CellTemplate.jsx";
 import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import Table from "../components/Table.jsx";
-import {simplifyDate} from "../utils.js";
+import {genericSortFunction, simplifyDate} from "../utils.js";
+import {ConfirmDialog} from "primereact/confirmdialog";
 
 
 function Clients() {
@@ -25,6 +26,7 @@ function Clients() {
     const navigate = useNavigate();
     const [notification, setNotification] = useState({message: '', type: ''});
     const [displayDialog, setDisplayDialog] = useState(false);
+    const [confirmDeleteDialog, setConfirmDeleteDialog] = useState({visible: false, client: null});
 
 
     const fetchClients = () => {
@@ -145,6 +147,9 @@ function Clients() {
             listFieldName: 'status',
             filter: true,
             sortable: true,
+            sortFunction: (e) => {
+                return genericSortFunction(e, 'clientStatus', 'status');
+            },
             body: (rowData) => DropDownCellTemplate(rowData, 'clientStatus', 'status', editingState, statusOptions, dropDownCellHandlers)
         },
         {
@@ -153,6 +158,9 @@ function Clients() {
             listFieldName: 'source',
             filter: true,
             sortable: true,
+            sortFunction: (e) => {
+                return genericSortFunction(e, 'referralSource', 'source');
+            },
             body: (rowData) => DropDownCellTemplate(rowData, 'referralSource', 'source', editingState, referralSourceOptions, dropDownCellHandlers)
         },
         {
@@ -235,13 +243,29 @@ function Clients() {
             }).catch(error => setNotification({message: `Failed to create client: ${error}`, type: 'error'}));
 
     };
-
+    const onDeleteRow = (rowData) => {
+        setConfirmDeleteDialog({visible: true, client: rowData});
+    }
+    const deleteClient = () => {
+        axios.delete(apiEndpoints.getClientDeleteEndpoint(confirmDeleteDialog.client.id))
+            .then(() => {
+                fetchClients();
+                setNotification({message: 'Client deleted successfully', type: 'success'});
+                setConfirmDeleteDialog({visible: false, client: null});
+            }).catch(error => setNotification({message: `Failed to delete client: ${error}`, type: 'error'}));
+    }
+    const cancelDeleteClient = () => {
+        setConfirmDeleteDialog({visible: false, client: null});
+    }
 
     return (
         <div style={{padding: '16px'}}>
-            <Table columns={columns} data={clients} onRowClick={onRowClick} setNotification={setNotification}
-                   paginatorLeftHandlers={{fetchClients, fetchStatusOptions}}
-                   downloadFileName="clients"
+            <Table
+                header={<h2>Clients</h2>}
+                columns={columns} data={clients} onRowClick={onRowClick} onDeleteRow={onDeleteRow}
+                setNotification={setNotification}
+                paginatorLeftHandlers={{fetchClients, fetchStatusOptions}}
+                downloadFileName="clients"
             ></Table>
             <Button
                 icon="pi pi-plus"
@@ -284,7 +308,14 @@ function Clients() {
                     </div>
                 </Card>
             </Dialog>
-
+            <ConfirmDialog
+                visible={confirmDeleteDialog.visible}
+                reject={cancelDeleteClient}
+                accept={deleteClient}
+                header={`Delete ${confirmDeleteDialog.client ? confirmDeleteDialog.client.name : ''}`}
+                message={`Are you sure you want to delete ${confirmDeleteDialog.client ? confirmDeleteDialog.client.name : ''}?`}
+            >
+            </ConfirmDialog>
             <Notification status={notification.type} message={notification.message}/>
         </div>
     );

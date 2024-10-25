@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import useAxios from "../useAxios.js";
+import useAxios from "../hooks/useAxios.js";
 
 import 'primeicons/primeicons.css';
 import Table from "../components/Table.jsx";
@@ -12,6 +12,8 @@ import {Dialog} from "primereact/dialog";
 import {Card} from "primereact/card";
 import {InputText} from "primereact/inputtext";
 import {Dropdown} from "primereact/dropdown";
+import {genericSortFunction} from "../utils.js";
+import {ConfirmDialog} from "primereact/confirmdialog";
 
 function Installments() {
 
@@ -25,6 +27,7 @@ function Installments() {
     const [notification, setNotification] = useState({message: '', type: ''});
     const [displayDialog, setDisplayDialog] = useState(false);
     const [newInstallment, setNewInstallment] = useState({});
+    const [confirmDeleteDialog, setConfirmDeleteDialog] = useState({visible: false, installment: null});
 
 
     const fetchInstallments = () => {
@@ -132,7 +135,8 @@ function Installments() {
             nestedField: 'name',
             filter: true,
             sortable: true,
-            body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'client', editingState, clientOptions, dropDownCellHandlers, 'name')
+            sortFunction: (e) => genericSortFunction(e, 'enrollment', 'client', 'name'),
+            body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'client', editingState, clientOptions, dropDownCellHandlers, 'name', false)
 
         },
         {
@@ -142,7 +146,8 @@ function Installments() {
             nestedField: 'name',
             filter: true,
             sortable: true,
-            body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'course', editingState, courseOptions, dropDownCellHandlers, 'name')
+            sortFunction: (e) => genericSortFunction(e, 'enrollment', 'course', 'name'),
+            body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'course', editingState, courseOptions, dropDownCellHandlers, 'name', false)
         },
         {
             field: 'amount',
@@ -171,6 +176,7 @@ function Installments() {
             listFieldName: 'method',
             filter: true,
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'paymentMethod', 'method'),
             body: (rowData) => DropDownCellTemplate(rowData, 'paymentMethod', 'method', editingState, paymentMethodOptions, dropDownCellHandlers)
         },
         {
@@ -179,6 +185,7 @@ function Installments() {
             listFieldName: 'status',
             filter: true,
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'paymentStatus', 'status'),
             body: (rowData) => DropDownCellTemplate(rowData, 'paymentStatus', 'status', editingState, paymentStatusOptions, dropDownCellHandlers)
         }
 
@@ -203,11 +210,28 @@ function Installments() {
         }).catch(error => setNotification({message: 'Failed to create installment ' + error, type: 'error'}));
     }
 
+    const onDeleteRow = (rowData) => {
+        setConfirmDeleteDialog({visible: true, installment: rowData});
+    }
+    const deleteInstallment = () => {
+        axios.delete(apiEndpoints.getInstallmentDeleteEndpoint(confirmDeleteDialog.installment.id))
+            .then(() => {
+                fetchInstallments();
+                setNotification({message: 'Installment deleted successfully', type: 'success'});
+                setConfirmDeleteDialog({visible: false, installment: null});
+            }).catch(error => setNotification({message: `Failed to delete installment: ${error}`, type: 'error'}));
+    }
+    const cancelDeleteInstallment = () => {
+        setConfirmDeleteDialog({visible: false, installment: null});
+    }
+
     return (
         <>
             <Table
+                header={'Installments'}
                 data={installments}
                 columns={columns}
+                onDeleteRow={onDeleteRow}
                 downloadFileName={'installments'}
                 setNotification={setNotification}
                 paginatorLeftHandlers={{
@@ -289,6 +313,14 @@ function Installments() {
                     </div>
                 </Card>
             </Dialog>
+            <ConfirmDialog
+                visible={confirmDeleteDialog.visible}
+                reject={cancelDeleteInstallment}
+                accept={deleteInstallment}
+                header={`Delete ${confirmDeleteDialog.installment ? confirmDeleteDialog.installment.name : ''}`}
+                message={`Are you sure you want to delete ${confirmDeleteDialog.installment ? confirmDeleteDialog.installment.name : ''}?`}
+            >
+            </ConfirmDialog>
             <Notification message={notification.message} type={notification.type}/>
         </>
     );

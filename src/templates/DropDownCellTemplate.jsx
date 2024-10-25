@@ -9,9 +9,14 @@ const DropDownCellTemplate = (rowData, columnField, listFieldName, editingState,
             {isEditing ? (
                 <>
                     <Dropdown
-                        value={editingState.editedValue ? nestedField !== '' ? editingState.editedValue[listFieldName][nestedField] : editingState.editedValue[listFieldName] : null}
+                        value={
+                            !editingState.editedValue ? null :
+                                nestedField !== '' ? editingState.editedValue[listFieldName][nestedField] :
+                                    editingState.editedValue[listFieldName]
+                        }
                         options={listOptions.map(e => {
-                            return nestedField !== '' ? e[listFieldName][nestedField] : e[listFieldName]
+                            console.log("e is", e);
+                            return nestedField !== '' ? e[nestedField] : e[listFieldName]
                         })}
                         onChange={e => handlers.onOptionChange(e, columnField)}
                         optionLabel="name"

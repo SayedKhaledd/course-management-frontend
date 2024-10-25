@@ -1,4 +1,6 @@
 const BASE_URL = 'http://localhost:8090/api';
+export const KEYCLOAK_URL = 'http://localhost:8080/';
+
 
 const API_ENDPOINTS = {
     clients: `${BASE_URL}/client/all`,
@@ -110,5 +112,13 @@ const API_ENDPOINTS = {
     },
     updateRefundIsConfirmed: (refundId, isConfirmed) => `${BASE_URL}/refund/${refundId}/is-confirmed/${isConfirmed}`,
     sales: `${BASE_URL}/sales/all`,
+
+    getClientDeleteEndpoint: (clientId) => `${BASE_URL}/client/${clientId}`,
+    getEnrollmentDeleteEndpoint: (enrollmentId) => `${BASE_URL}/enrollment/${enrollmentId}`,
+    getRefundDeleteEndpoint: (refundId) => `${BASE_URL}/refund/${refundId}`,
+    getCourseDeleteEndpoint: (courseId) => `${BASE_URL}/course/${courseId}`,
+    getInstallmentDeleteEndpoint: (installmentId) => `${BASE_URL}/installment/${installmentId}`,
+    getCourseLecturerDeleteEndpoint: (courseLecturerId) => `${BASE_URL}/course-lecturer/${courseLecturerId}`,
+
 };
 export default API_ENDPOINTS;

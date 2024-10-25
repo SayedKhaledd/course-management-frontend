@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import useAxios from "../useAxios.js";
+import useAxios from "../hooks/useAxios.js";
 
 import 'primeicons/primeicons.css';
 import Notification from "../components/Notification.jsx";
@@ -11,7 +11,9 @@ import {Button} from "primereact/button";
 import {Dialog} from "primereact/dialog";
 import {Card} from "primereact/card";
 import {Dropdown} from "primereact/dropdown";
-import {InputText} from "primereact/inputtext"; // For using icons
+import {InputText} from "primereact/inputtext";
+import {genericSortFunction} from "../utils.js";
+import {ConfirmDialog} from "primereact/confirmdialog"; // For using icons
 
 function Refunds() {
     const [refunds, setRefunds] = useState([]);
@@ -24,6 +26,7 @@ function Refunds() {
     const [notification, setNotification] = useState({message: '', type: ''});
     const [displayDialog, setDisplayDialog] = useState(false);
     const [newRefund, setNewRefund] = useState({});
+    const [confirmDeleteDialog, setConfirmDeleteDialog] = useState({visible: false, refund: null});
 
 
     const fetchRefunds = () => {
@@ -117,7 +120,8 @@ function Refunds() {
             nestedField: 'name',
             filter: true,
             sortable: true,
-            body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'client', editingState, clientOptions, dropDownCellHandlers, 'name')
+            sortFunction: (e) => genericSortFunction(e, 'enrollment', 'client', 'name'),
+            body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'client', editingState, clientOptions, dropDownCellHandlers, 'name', false)
         },
 
         {
@@ -127,7 +131,8 @@ function Refunds() {
             nestedField: 'name',
             filter: true,
             sortable: true,
-            body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'course', editingState, courseOptions, dropDownCellHandlers, 'name')
+            sortFunction: (e) => genericSortFunction(e, 'enrollment', 'course', 'name'),
+            body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'course', editingState, courseOptions, dropDownCellHandlers, 'name', false)
         },
         {
             field: 'amount',
@@ -149,6 +154,7 @@ function Refunds() {
             listFieldName: 'reason',
             filter: true,
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'refundReason', 'reason'),
             body: (rowData) => DropDownCellTemplate(rowData, 'refundReason', 'refundReason', editingState, refundReasonOptions, dropDownCellHandlers,)
         },
         {
@@ -156,7 +162,7 @@ function Refunds() {
             header: 'Explanation',
             filter: true,
             sortable: true,
-            body: (rowData) => DropDownCellTemplate(rowData, 'explanation', 'explanation', editingState, [], handlers)
+            body: (rowData) => CellTemplate(rowData, 'explanation', editingState, handlers)
         },
         //is confirmed
         {
@@ -173,6 +179,7 @@ function Refunds() {
             listFieldName: 'method',
             filter: true,
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'paymentMethod', 'method'),
             body: (rowData) => DropDownCellTemplate(rowData, 'paymentMethod', 'method', editingState, paymentMethodOptions, dropDownCellHandlers)
         },
 
@@ -193,6 +200,21 @@ function Refunds() {
             closeDialog();
         }).catch(error => setNotification({message: 'Failed to create installment ' + error, type: 'error'}));
     }
+    const onDeleteRow = (rowData) => {
+        setConfirmDeleteDialog({visible: true, refund: rowData});
+    }
+    const deleteRefund = () => {
+        axios.delete(apiEndpoints.getRefundDeleteEndpoint(confirmDeleteDialog.refund.id))
+            .then(() => {
+                fetchRefunds();
+                setNotification({message: 'Refund deleted successfully', type: 'success'});
+                setConfirmDeleteDialog({visible: false, refund: null});
+            }).catch(error => setNotification({message: `Failed to delete refund: ${error}`, type: 'error'}));
+    }
+    const cancelDeleteRefund = () => {
+        setConfirmDeleteDialog({visible: false, refund: null});
+    }
+
 
     useEffect(() => {
         fetchRefunds();
@@ -207,8 +229,10 @@ function Refunds() {
     return (
         <>
             <Table
+                header={'Refunds'}
                 columns={columns}
                 data={refunds}
+                onDeleteRow={onDeleteRow}
                 downloadFileName={'refunds'}
                 paginatorLeftHandlers={[fetchRefunds, fetchClientOptions, fetchCourseOptions, fetchPaymentMethodOptions, fetchRefundReasonOptions]}
 
@@ -277,6 +301,14 @@ function Refunds() {
                     </div>
                 </Card>
             </Dialog>
+            <ConfirmDialog
+                visible={confirmDeleteDialog.visible}
+                reject={cancelDeleteRefund}
+                accept={deleteRefund}
+                header={`Delete ${confirmDeleteDialog.refund ? confirmDeleteDialog.refund.enrollment.course.name : ''}`}
+                message={`Are you sure you want to delete this  ${confirmDeleteDialog.refund ? confirmDeleteDialog.refund.enrollment.course.name : ''} refund?`}
+            >
+            </ConfirmDialog>
 
             <Notification message={notification.message} type={notification.type}/>
         </>

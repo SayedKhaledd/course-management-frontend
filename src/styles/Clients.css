@@ -7,3 +7,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+.p-m-4 {
+    margin: 1.5rem;
+    width: 800px;
+    height: 70%;
+    overflow: scroll;
+}

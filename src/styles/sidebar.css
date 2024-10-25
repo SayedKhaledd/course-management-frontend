@@ -1,6 +1,6 @@
 /* sidebar.css */
 .sidebar {
-    width: fit-content;
+    width: 20rem;
     height: 100%;
     background-color: var(--primary-bg-color);
     padding: 0;
@@ -10,11 +10,6 @@
     justify-content: left;
 }
 
-
-/* PanelMenu header content background and text color */
-/*.sidebar .p-panelmenu-header-content-icon {*/
-/*    width: 20px;*/
-/*}*/
 
 .sidebar .p-panelmenu-header-content {
     background: var(--primary-bg-color) !important;

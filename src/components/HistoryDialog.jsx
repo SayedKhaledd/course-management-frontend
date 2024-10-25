@@ -10,7 +10,6 @@ const HistoryDialog = ({visible, setVisible, history, selectedField}) => {
         style={{width: '50vw'}}
         onHide={() => setVisible(false)}
     >
-        {/* History Table */}
         <DataTable
             value={history.map((entry) => {
                 entry.modifiedDate = simplifyDate(entry.modifiedDate);

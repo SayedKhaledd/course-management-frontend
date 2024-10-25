@@ -5,7 +5,7 @@ import {Button} from "primereact/button";
 import HistoryDialog from "../components/HistoryDialog.jsx";
 import React, {useEffect, useState} from "react";
 import {useLocation, useParams} from "react-router-dom";
-import useAxios from "../useAxios.js";
+import useAxios from "../hooks/useAxios.js";
 import apiEndpoints from "../apiEndpoints.js";
 import Notification from "../components/Notification.jsx";
 import Table from "../components/Table.jsx";
@@ -13,7 +13,8 @@ import {Dialog} from "primereact/dialog";
 import {Dropdown} from "primereact/dropdown";
 import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import CellTemplate from "../templates/CellTemplate.jsx";
-import {simplifyDate} from "../utils.js";
+import {genericSortFunction, simplifyDate} from "../utils.js";
+import {ConfirmDialog} from "primereact/confirmdialog";
 
 const CourseDetails = () => {
     const location = useLocation();
@@ -36,7 +37,7 @@ const CourseDetails = () => {
     const [paymentStatusOptions, setPaymentStatusOptions] = useState([]);
     const [actionOptions, setActionOptions] = useState([]);
     const [referralSourceOptions, setReferralSourceOptions] = useState([]);
-    const [dialogState, setDialogState] = useState({visible: false, newEnrollment: {}});
+    const [enrollmentDialogState, setEnrollmentDialogState] = useState({visible: false, newEnrollment: {}});
     const [courseLecturers, setCourseLecturers] = useState([]);
     const [editingCourseLecturerState, setEditingCourseLecturerState] = useState({
         id: '',
@@ -44,6 +45,14 @@ const CourseDetails = () => {
         editedValue: null
     });
     const [lecturerDialogState, setLecturerDialogState] = useState({visible: false, newLecturer: {}});
+    const [confirmEnrollmentDeleteDialog, setConfirmEnrollmentDeleteDialog] = useState({
+        visible: false,
+        enrollment: null
+    });
+    const [confirmCourseLecturerDeleteDialog, setConfirmCourseLecturerDeleteDialog] = useState({
+        visible: false,
+        courseLecturer: null
+    });
 
 
     const fetchCourse = () => {
@@ -133,6 +142,7 @@ const CourseDetails = () => {
         const payload = {[columnField]: course[columnField]};
         await axios.patch(endpoint, payload).then(() => {
             fetchCourse();
+            setCourse({...course, [columnField]: course[columnField]});
             setNotification({message: `Updated ${columnField} successfully`, type: 'success'});
         }).catch(error => {
             setNotification({message: `Failed to update ${columnField}: ${error}`, type: 'error'});
@@ -149,12 +159,19 @@ const CourseDetails = () => {
             .catch(error => setNotification({message: 'Failed to fetch history ' + error, type: 'error'}));
     };
 
-    const openDialog = () => {
-        setDialogState({...dialogState, visible: true});
+
+    const openLecturerDialog = () => {
+        setLecturerDialogState({...lecturerDialogState, visible: true});
     }
 
-    const closeDialog = () => {
-        setDialogState({...dialogState, visible: false});
+    const closeLecturerDialog = () => {
+        setLecturerDialogState({...lecturerDialogState, visible: false});
+    }
+    const openEnrollmentDialog = () => {
+        setEnrollmentDialogState({...enrollmentDialogState, visible: true});
+    }
+    const closeEnrollmentDialog = () => {
+        setEnrollmentDialogState({...enrollmentDialogState, visible: false});
     }
     const onEdit = (id, columnField, editedValue) => {
         setEditingEnrollmentState({id, columnField, editedValue});
@@ -236,6 +253,7 @@ const CourseDetails = () => {
             filter: true,
             listFieldName: 'name',
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'client', 'name'),
             body: (rowData) => DropDownCellTemplate(rowData, 'client', 'name', editingEnrollmentState, clientOptions, dropDownCellHandlers)
         },
         {
@@ -279,6 +297,7 @@ const CourseDetails = () => {
             listFieldName: 'method',
             filter: true,
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'paymentMethod', 'method'),
             body: (rowData) => DropDownCellTemplate(rowData, 'paymentMethod', 'method', editingEnrollmentState, paymentMethodOptions, dropDownCellHandlers)
         },
         {
@@ -287,6 +306,7 @@ const CourseDetails = () => {
             listFieldName: 'status',
             filter: true,
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'paymentStatus', 'status'),
             body: (rowData) => DropDownCellTemplate(rowData, 'paymentStatus', 'status', editingEnrollmentState, paymentStatusOptions, dropDownCellHandlers)
         },
         {
@@ -295,6 +315,7 @@ const CourseDetails = () => {
             listFieldName: 'action',
             filter: true,
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'actionTaken', 'action'),
             body: (rowData) => DropDownCellTemplate(rowData, 'actionTaken', 'action', editingEnrollmentState, actionOptions, dropDownCellHandlers)
         },
         {
@@ -303,6 +324,7 @@ const CourseDetails = () => {
             listFieldName: 'source',
             filter: true,
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'referralSource', 'source'),
             body: (rowData) => DropDownCellTemplate(rowData, 'referralSource', 'source', editingEnrollmentState, referralSourceOptions, dropDownCellHandlers)
         },
         {
@@ -460,10 +482,10 @@ const CourseDetails = () => {
     ]
 
     const onClientChange = (e) => {
-        setDialogState({
-            ...dialogState,
+        setEnrollmentDialogState({
+            ...enrollmentDialogState,
             newEnrollment: {
-                ...dialogState.newEnrollment, clientName: e.target.value,
+                ...enrollmentDialogState.newEnrollment, clientName: e.target.value,
                 clientId: clientOptions.find(option => option.name === e.target.value).id
             }
         });
@@ -472,23 +494,15 @@ const CourseDetails = () => {
     const createEnrollment = () => {
         axios.post(apiEndpoints.createEnrollment, {
             courseId: Number(id),
-            clientId: dialogState.newEnrollment.clientId,
+            clientId: enrollmentDialogState.newEnrollment.clientId,
         }).then(response => {
             setNotification({message: 'Enrollment created successfully', type: 'success'});
             fetchEnrollments();
-            closeLecturerDialog();
+            closeEnrollmentDialog();
         }).catch(error => {
             setNotification({message: 'Failed to create enrollment' + error, type: 'error'});
         });
     };
-
-    const openLecturerDialog = () => {
-        setLecturerDialogState({...lecturerDialogState, visible: true});
-    }
-
-    const closeLecturerDialog = () => {
-        setLecturerDialogState({...lecturerDialogState, visible: false});
-    }
 
     const createLecturer = () => {
         axios.post(apiEndpoints.createCourseLecturer, {
@@ -497,7 +511,7 @@ const CourseDetails = () => {
         }).then(response => {
             setNotification({message: 'Lecturer created successfully', type: 'success'});
             fetchCourseLecturers();
-            closeDialog();
+            closeLecturerDialog();
         }).catch(error => {
             setNotification({message: 'Failed to create enrollment' + error, type: 'error'});
         });
@@ -510,6 +524,37 @@ const CourseDetails = () => {
             }
         });
     }
+
+    const onDeleteEnrollmentRow = (rowData) => {
+        setConfirmEnrollmentDeleteDialog({visible: true, enrollment: rowData});
+    }
+    const deleteEnrollment = () => {
+        axios.delete(apiEndpoints.getEnrollmentDeleteEndpoint(confirmEnrollmentDeleteDialog.enrollment.id))
+            .then(() => {
+                fetchEnrollments();
+                setNotification({message: 'Enrollment deleted successfully', type: 'success'});
+                setConfirmEnrollmentDeleteDialog({visible: false, enrollment: null});
+            }).catch(error => setNotification({message: `Failed to delete enrollment: ${error}`, type: 'error'}));
+    }
+    const cancelDeleteEnrollment = () => {
+        setConfirmEnrollmentDeleteDialog({visible: false, enrollment: null});
+    }
+
+    const onDeleteCourseLecturerRow = (rowData) => {
+        setConfirmCourseLecturerDeleteDialog({visible: true, courseLecturer: rowData});
+    }
+    const deleteCourseLecturer = () => {
+        axios.delete(apiEndpoints.getCourseLecturerDeleteEndpoint(confirmCourseLecturerDeleteDialog.courseLecturer.id))
+            .then(() => {
+                fetchCourseLecturers();
+                setNotification({message: 'Course Lecturer deleted successfully', type: 'success'});
+                setConfirmCourseLecturerDeleteDialog({visible: false, courseLecturer: null});
+            }).catch(error => setNotification({message: `Failed to delete Course Lecturer: ${error}`, type: 'error'}));
+    }
+    const cancelDeleteCourseLecturer = () => {
+        setConfirmCourseLecturerDeleteDialog({visible: false, courseLecturer: null});
+    }
+
 
     if (!course) {
         return <div>Loading course data...</div>;
@@ -666,15 +711,12 @@ const CourseDetails = () => {
                     history={history}
                     field={selectedField}/>
             </Card>
-
-            <h2>Enrollments</h2>
-            {/*<Table></Table>*/}
-
-
-            {/*<Table></Table>*/}
-            <Table data={enrollments} columns={columns} paginatorLeftHandlers={fetchEnrollments}
-                   downloadFileName={'enrollments'}
-                   setNotification={setNotification}
+            <Table
+                header={'Enrollments'}
+                onDeleteRow={onDeleteEnrollmentRow}
+                data={enrollments} columns={columns} paginatorLeftHandlers={fetchEnrollments}
+                downloadFileName={'enrollments'}
+                setNotification={setNotification}
 
             ></Table>
 
@@ -683,22 +725,22 @@ const CourseDetails = () => {
                 icon="pi pi-plus"
                 className="p-button-rounded p-button-primary"
                 style={{position: 'fixed', marginTop: '200px', bottom: '16px', right: '16px', zIndex: 1000}}
-                onClick={openDialog}
+                onClick={openEnrollmentDialog}
                 label="New Enrollment"
             />
             <Dialog
                 header="Create New Enrollment"
-                visible={dialogState.visible}
+                visible={enrollmentDialogState.visible}
                 style={{width: '50vw'}}
                 modal
-                onHide={closeDialog}
+                onHide={closeEnrollmentDialog}
             >
                 <Card title="Enrollment Details">
                     <div className="p-fluid">
                         <div className="p-field">
                             <label htmlFor="client">Client Name</label>
                             <Dropdown id="client"
-                                      value={dialogState.newEnrollment?.clientName}
+                                      value={enrollmentDialogState.newEnrollment?.clientName}
                                       options={clientOptions.map(client => client.name)}
                                       placeholder="Select a client"
                                       onChange={onClientChange}
@@ -707,15 +749,16 @@ const CourseDetails = () => {
 
                         <div className="p-d-flex p-jc-end">
                             <Button label="Save" icon="pi pi-check" onClick={createEnrollment} className="p-mr-2"/>
-                            <Button label="Cancel" icon="pi pi-times" onClick={closeDialog}
+                            <Button label="Cancel" icon="pi pi-times" onClick={closeEnrollmentDialog}
                                     className="p-button-secondary"/>
                         </div>
                     </div>
                 </Card>
             </Dialog>
-
-            <h2>Lecturers</h2>
+            <div style={{margin: '10px'}}></div>
             <Table
+                header={'Course Lecturers'}
+                onDeleteRow={onDeleteCourseLecturerRow}
                 columns={courseLecturersColumns} data={courseLecturers} paginatorLeftHandlers={fetchCourseLecturers}
             ></Table>
 
@@ -733,7 +776,7 @@ const CourseDetails = () => {
                 modal
                 onHide={closeLecturerDialog}
             >
-                <Card title="Enrollment Details">
+                <Card title="Course Lecturer">
                     <div className="p-fluid">
                         <div className="p-field">
                             <label htmlFor="client">Name</label>
@@ -752,6 +795,24 @@ const CourseDetails = () => {
                     </div>
                 </Card>
             </Dialog>
+
+            <ConfirmDialog
+                visible={confirmEnrollmentDeleteDialog.visible}
+                reject={cancelDeleteEnrollment}
+                accept={deleteEnrollment}
+                header={`Delete ${confirmEnrollmentDeleteDialog.enrollment ? confirmEnrollmentDeleteDialog.enrollment.client.name : ''}`}
+                message={`Are you sure you want to delete this  ${confirmEnrollmentDeleteDialog.enrollment ? confirmEnrollmentDeleteDialog.enrollment.client.name : ''}?`}
+            >
+            </ConfirmDialog>
+
+            <ConfirmDialog
+                visible={confirmCourseLecturerDeleteDialog.visible}
+                reject={cancelDeleteCourseLecturer}
+                accept={deleteCourseLecturer}
+                header={`Delete ${confirmCourseLecturerDeleteDialog.courseLecturer ? confirmCourseLecturerDeleteDialog.courseLecturer.name : ''}`}
+                message={`Are you sure you want to delete this  ${confirmCourseLecturerDeleteDialog.courseLecturer ? confirmCourseLecturerDeleteDialog.courseLecturer.name : ''} ?`}
+            >
+            </ConfirmDialog>
 
             <Notification status={notification.type} message={notification.message}/>
         </>

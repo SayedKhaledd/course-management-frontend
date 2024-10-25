@@ -5,16 +5,17 @@ import {InputText} from 'primereact/inputtext';
 import {Dropdown} from 'primereact/dropdown';
 import {Button} from 'primereact/button';
 import {Dialog} from 'primereact/dialog';
-import useAxios from "../useAxios.js";
+import useAxios from "../hooks/useAxios.js";
 import {useLocation, useParams} from 'react-router-dom';
 import '../styles/Client_Details.css';
-import {simplifyDate} from "../utils.js";
+import {genericSortFunction, simplifyDate} from "../utils.js";
 import Notification from "../components/Notification.jsx";
 import Table from "../components/Table.jsx";
 import apiEndpoints from "../apiEndpoints.js";
 import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import CellTemplate from "../templates/CellTemplate.jsx";
 import HistoryDialog from "../components/HistoryDialog.jsx";
+import {ConfirmDialog} from "primereact/confirmdialog";
 
 
 const ClientDetails = () => {
@@ -39,6 +40,7 @@ const ClientDetails = () => {
     const [actionOptions, setActionOptions] = useState([]);
     const [referralSourceOptions, setReferralSourceOptions] = useState([]);
     const [dialogState, setDialogState] = useState({visible: false, newEnrollment: {}});
+    const [confirmDeleteDialog, setConfirmDeleteDialog] = useState({visible: false, enrollment: null});
 
 
     const fetchClient = () => {
@@ -119,6 +121,7 @@ const ClientDetails = () => {
         const payload = {[columnField]: client[columnField]};
         await axios.patch(endpoint, payload).then(() => {
             fetchClient();
+            setClient({...client, [columnField]: client[columnField]});
             setNotification({message: `Updated ${columnField} successfully`, type: 'success'});
         }).catch(error => {
             setNotification({message: `Failed to update ${columnField}: ${error}`, type: 'error'});
@@ -202,6 +205,20 @@ const ClientDetails = () => {
 
     };
 
+    const onDeleteRow = (rowData) => {
+        setConfirmDeleteDialog({visible: true, enrollment: rowData});
+    }
+    const deleteEnrollment = () => {
+        axios.delete(apiEndpoints.getEnrollmentDeleteEndpoint(confirmDeleteDialog.enrollment.id))
+            .then(() => {
+                fetchEnrollments();
+                setNotification({message: 'Client deleted successfully', type: 'success'});
+                setConfirmDeleteDialog({visible: false, enrollment: null});
+            }).catch(error => setNotification({message: `Failed to delete client: ${error}`, type: 'error'}));
+    }
+    const cancelDeleteEnrollment = () => {
+        setConfirmDeleteDialog({visible: false, enrollment: null});
+    }
 
     const cellHandlers = {
         onEdit, onSubmitEdit, onCancelEdit, onCellChange
@@ -217,6 +234,7 @@ const ClientDetails = () => {
             filter: true,
             listFieldName: 'name',
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'course', 'name'),
             body: (rowData) => DropDownCellTemplate(rowData, 'course', 'name', editingEnrollmentState, coursesOptions, dropDownCellHandlers)
         },
         {
@@ -260,6 +278,7 @@ const ClientDetails = () => {
             listFieldName: 'method',
             filter: true,
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'paymentMethod', 'method'),
             body: (rowData) => DropDownCellTemplate(rowData, 'paymentMethod', 'method', editingEnrollmentState, paymentMethodOptions, dropDownCellHandlers)
         },
         {
@@ -268,6 +287,7 @@ const ClientDetails = () => {
             listFieldName: 'status',
             filter: true,
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'paymentStatus', 'status'),
             body: (rowData) => DropDownCellTemplate(rowData, 'paymentStatus', 'status', editingEnrollmentState, paymentStatusOptions, dropDownCellHandlers)
         },
         {
@@ -276,6 +296,7 @@ const ClientDetails = () => {
             listFieldName: 'action',
             filter: true,
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'actionTaken', 'action'),
             body: (rowData) => DropDownCellTemplate(rowData, 'actionTaken', 'action', editingEnrollmentState, actionOptions, dropDownCellHandlers)
         },
         {
@@ -284,6 +305,7 @@ const ClientDetails = () => {
             listFieldName: 'source',
             filter: true,
             sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'referralSource', 'source'),
             body: (rowData) => DropDownCellTemplate(rowData, 'referralSource', 'source', editingEnrollmentState, referralSourceOptions, dropDownCellHandlers)
         },
         {
@@ -508,10 +530,12 @@ const ClientDetails = () => {
                     history={history}
                     field={selectedField}/>
             </Card>
-            <h2>Enrollments</h2>
-            <Table data={enrollments} columns={columns} paginatorLeftHandlers={fetchEnrollments}
+            <Table
+                header={'Enrollments'}
+                data={enrollments} columns={columns} paginatorLeftHandlers={fetchEnrollments}
                    downloadFileName={'enrollments'}
                    setNotification={setNotification}
+                     onDeleteRow={onDeleteRow}
 
             ></Table>
 
@@ -550,6 +574,14 @@ const ClientDetails = () => {
                     </div>
                 </Card>
             </Dialog>
+            <ConfirmDialog
+                visible={confirmDeleteDialog.visible}
+                reject={cancelDeleteEnrollment}
+                accept={deleteEnrollment}
+                header={`Delete ${confirmDeleteDialog.enrollment ? confirmDeleteDialog.enrollment.course.name : ''}`}
+                message={`Are you sure you want to delete ${confirmDeleteDialog.enrollment ? confirmDeleteDialog.enrollment.course.name : ''}?`}
+            >
+            </ConfirmDialog>
 
             <Notification status={notification.type} message={notification.message}/>
 

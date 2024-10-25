@@ -1,6 +1,5 @@
 import './styles/App.css';
 import {BrowserRouter, Route, Routes} from 'react-router-dom';
-import Courses from './pages/Courses.jsx';
 import ClientDetails from './pages/ClientDetails.jsx';
 import SideBar from './components/SideBar.jsx';
 import kc, {initOptions} from './keycloak.js';
@@ -11,6 +10,8 @@ import Sales from "./pages/Sales.jsx";
 import Refunds from "./pages/Refunds.jsx";
 import Clients from "./pages/Clients.jsx";
 import CourseDetails from "./pages/CourseDetails.jsx";
+import useSecurity from "./hooks/useSecurity.js";
+import Courses from "./pages/Courses.jsx";
 
 
 function App() {
@@ -18,26 +19,73 @@ function App() {
         <ReactKeycloakProvider authClient={kc} initOptions={initOptions}>
             <BrowserRouter>
                 <div className="app-container">
-
                     <SideBar className="sidebar"/>
                     <div className="main-content">
                         <Routes>
-                            <Route path="/" element={<PrivateRoute><Clients/> </PrivateRoute>}/>
-                            <Route path="/clients" element={<PrivateRoute><Clients/> </PrivateRoute>}/>
-                            <Route path="/courses" element={<PrivateRoute><Courses/> </PrivateRoute>}/>
-                            <Route path="/installments" element={<PrivateRoute><Installments/> </PrivateRoute>}/>
-                            <Route path="/sales" element={<PrivateRoute><Sales/> </PrivateRoute>}/>
-                            <Route path="/refunds" element={<PrivateRoute><Refunds/> </PrivateRoute>}/>
-                            <Route path="/client/:id" element={<PrivateRoute><ClientDetails/> </PrivateRoute>}/>
-                            <Route path="/course/:id" element={<PrivateRoute><CourseDetails/> </PrivateRoute>}/>
-
+                            <Route path="/" element={<ClientsRoute/>}/>
+                            <Route path="/clients" element={<ClientsRoute/>}/>
+                            <Route path="/courses" element={<CoursesRoute/>}/>
+                            <Route path="/installments" element={<InstallmentsRoute/>}/>
+                            <Route path="/sales" element={<SalesRoute/>}/>
+                            <Route path="/refunds" element={<RefundsRoute/>}/>
+                            <Route path="/client/:id" element={<ClientDetailsRoute/>}/>
+                            <Route path="/course/:id" element={<CourseDetailsRoute/>}/>
                         </Routes>
                     </div>
                 </div>
-
             </BrowserRouter>
         </ReactKeycloakProvider>
     );
 }
+
+const ClientsRoute = () => {
+    const security = useSecurity();
+    return <PrivateRoute children={<Clients/>} roles={Object.values(security.getRoles())}/>;
+};
+
+const CoursesRoute = () => {
+    const security = useSecurity();
+    return <PrivateRoute children={<Courses/>} roles={Object.values(security.getRoles())}/>;
+};
+
+const InstallmentsRoute = () => {
+    const security = useSecurity();
+    return <PrivateRoute children={<Installments/>} roles={[
+        security.getRoles().ADMIN,
+        security.getRoles().SUPER_ADMIN,
+        security.getRoles().ACCOUNTANT,
+        security.getRoles().SALES,
+        security.getRoles().CUSTOMER_SERVICE
+    ]}/>;
+};
+
+const SalesRoute = () => {
+    const security = useSecurity();
+    return <PrivateRoute children={<Sales/>} roles={[
+        security.getRoles().ADMIN,
+        security.getRoles().SUPER_ADMIN,
+        security.getRoles().ACCOUNTANT
+    ]}/>;
+};
+
+const RefundsRoute = () => {
+    const security = useSecurity();
+    return <PrivateRoute children={<Refunds/>} roles={[
+        security.getRoles().ADMIN,
+        security.getRoles().SUPER_ADMIN,
+        security.getRoles().ACCOUNTANT,
+        security.getRoles().CUSTOMER_SERVICE
+    ]}/>;
+};
+
+const ClientDetailsRoute = () => {
+    const security = useSecurity();
+    return <PrivateRoute children={<ClientDetails/>} roles={Object.values(security.getRoles())}/>;
+};
+
+const CourseDetailsRoute = () => {
+    const security = useSecurity();
+    return <PrivateRoute children={<CourseDetails/>} roles={Object.values(security.getRoles())}/>;
+};
 
 export default App;
