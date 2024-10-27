@@ -134,6 +134,8 @@ const CourseDetails = () => {
         fetchCourseLecturers();
     }, []);
 
+
+    //course handlers
     const handleInputChange = (e, field) => {
         setCourse({...course, [field]: e.target.value});
     };
@@ -159,7 +161,7 @@ const CourseDetails = () => {
             .catch(error => setNotification({message: 'Failed to fetch history ' + error, type: 'error'}));
     };
 
-
+    //course lecturers dialog handlers
     const openLecturerDialog = () => {
         setLecturerDialogState({...lecturerDialogState, visible: true});
     }
@@ -167,12 +169,16 @@ const CourseDetails = () => {
     const closeLecturerDialog = () => {
         setLecturerDialogState({...lecturerDialogState, visible: false});
     }
+
+    //enrollment dialog handlers
     const openEnrollmentDialog = () => {
         setEnrollmentDialogState({...enrollmentDialogState, visible: true});
     }
     const closeEnrollmentDialog = () => {
         setEnrollmentDialogState({...enrollmentDialogState, visible: false});
     }
+
+    //enrollment cell change handlers
     const onEdit = (id, columnField, editedValue) => {
         setEditingEnrollmentState({id, columnField, editedValue});
     };
@@ -246,6 +252,7 @@ const CourseDetails = () => {
         onEdit, onSubmitEdit, onCancelEdit, onOptionChange: onDropDownChange
     };
 
+    //enrollment columns
     const columns = [
         {
             field: 'client',
@@ -384,6 +391,7 @@ const CourseDetails = () => {
         }
     ];
 
+    //course lecturers cell change handlers
     const onEditCourseLecturer = (id, columnField, editedValue) => {
         setEditingCourseLecturerState({id, columnField, editedValue});
     }
@@ -416,6 +424,7 @@ const CourseDetails = () => {
         onCellChange: onCellChangeCourseLecturer
     };
 
+    //course lecturers columns
     const courseLecturersColumns = [
         {
             field: 'name',
@@ -481,6 +490,7 @@ const CourseDetails = () => {
         }
     ]
 
+    //enrollment dialog handlers
     const onClientChange = (e) => {
         setEnrollmentDialogState({
             ...enrollmentDialogState,
@@ -504,6 +514,7 @@ const CourseDetails = () => {
         });
     };
 
+    //course lecturers dialog handlers
     const createLecturer = () => {
         axios.post(apiEndpoints.createCourseLecturer, {
             courseId: Number(id),
@@ -525,6 +536,7 @@ const CourseDetails = () => {
         });
     }
 
+    //delete enrollment and course lecturer handlers
     const onDeleteEnrollmentRow = (rowData) => {
         setConfirmEnrollmentDeleteDialog({visible: true, enrollment: rowData});
     }
