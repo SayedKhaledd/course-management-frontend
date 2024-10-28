@@ -321,7 +321,7 @@ function Installments() {
                 message={`Are you sure you want to delete ${confirmDeleteDialog.installment ? confirmDeleteDialog.installment.name : ''}?`}
             >
             </ConfirmDialog>
-            <Notification message={notification.message} type={notification.type}/>
+            <Notification status={notification.type} message={notification.message}/>
         </>
     );
 }

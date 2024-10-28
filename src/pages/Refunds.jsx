@@ -195,10 +195,10 @@ function Refunds() {
 
     const createRefund = () => {
         axios.post(apiEndpoints.createRefund, newRefund).then(response => {
-            setNotification({message: 'Installment created successfully', type: 'success'});
+            setNotification({message: 'Refund created successfully', type: 'success'});
             fetchRefunds();
             closeDialog();
-        }).catch(error => setNotification({message: 'Failed to create installment ' + error, type: 'error'}));
+        }).catch(error => setNotification({message: 'Failed to create refund ' + error, type: 'error'}));
     }
     const onDeleteRow = (rowData) => {
         setConfirmDeleteDialog({visible: true, refund: rowData});
@@ -310,7 +310,7 @@ function Refunds() {
             >
             </ConfirmDialog>
 
-            <Notification message={notification.message} type={notification.type}/>
+            <Notification status={notification.type} message={notification.message}/>
         </>
     );
 }

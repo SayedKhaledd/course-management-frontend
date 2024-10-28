@@ -119,7 +119,10 @@ const API_ENDPOINTS = {
     getInstallmentDeleteEndpoint: (installmentId) => `${BASE_URL}/installment/${installmentId}`,
     getCourseLecturerDeleteEndpoint: (courseLecturerId) => `${BASE_URL}/course-lecturer/${courseLecturerId}`,
     users: `${BASE_URL}/user/all`,
-    roles: `${BASE_URL}/roles/all`
+    roles: `${BASE_URL}/roles/all`,
+    getUserUpdate: (userId, columnField) => `${BASE_URL}/user/${userId}/${columnField.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}` ,
+    getDeleteUser: (userId) => `${BASE_URL}/user/${userId}`,
+    createUser: `${BASE_URL}/user`,
 
 };
 export default API_ENDPOINTS;

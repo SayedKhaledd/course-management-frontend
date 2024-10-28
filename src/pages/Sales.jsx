@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import useAxios from "../hooks/useAxios.js";
 // import 'primereact/resources/themes/lara-light-indigo/theme.css'; // You can change the theme here
 // import 'primereact/resources/primereact.min.css';
@@ -116,7 +116,7 @@ function Sales() {
 
             ></Table>
 
-            <Notification message={notification.message} type={notification.type}/>
+            <Notification status={notification.type} message={notification.message}/>
         </>
     );
 }

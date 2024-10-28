@@ -736,7 +736,7 @@ const CourseDetails = () => {
             <Button
                 icon="pi pi-plus"
                 className="p-button-rounded p-button-primary"
-                style={{position: 'fixed', marginTop: '200px', bottom: '16px', right: '16px', zIndex: 1000}}
+                style={{position: 'static', marginTop: '20px', bottom: '16px', marginLeft: '800px', zIndex: 1000}}
                 onClick={openEnrollmentDialog}
                 label="New Enrollment"
             />
@@ -777,7 +777,7 @@ const CourseDetails = () => {
             <Button
                 icon="pi pi-plus"
                 className="p-button-rounded p-button-primary"
-                style={{position: 'fixed', marginTop: '200px', bottom: '16px', right: '300px', zIndex: 1000}}
+                style={{position: 'static', marginTop: '20px', bottom: '16px', marginLeft: '800px', zIndex: 1000}}
                 onClick={openLecturerDialog}
                 label="New Lecturer"
             />
