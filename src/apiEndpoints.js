@@ -1,5 +1,4 @@
-const BASE_URL = 'http://localhost:8090/api';
-export const KEYCLOAK_URL = 'http://localhost:8080/';
+import {BASE_URL} from "./constants.js";
 
 
 const API_ENDPOINTS = {
