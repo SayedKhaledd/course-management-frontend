@@ -12,6 +12,7 @@ import Clients from "./pages/Clients.jsx";
 import CourseDetails from "./pages/CourseDetails.jsx";
 import useSecurity from "./hooks/useSecurity.js";
 import Courses from "./pages/Courses.jsx";
+import Users from "./pages/Users.jsx";
 
 
 function App() {
@@ -30,6 +31,8 @@ function App() {
                             <Route path="/refunds" element={<RefundsRoute/>}/>
                             <Route path="/client/:id" element={<ClientDetailsRoute/>}/>
                             <Route path="/course/:id" element={<CourseDetailsRoute/>}/>
+                            <Route path={"/users"} element={<UsersRoute/>}/>
+
                         </Routes>
                     </div>
                 </div>
@@ -87,5 +90,13 @@ const CourseDetailsRoute = () => {
     const security = useSecurity();
     return <PrivateRoute children={<CourseDetails/>} roles={Object.values(security.getRoles())}/>;
 };
+
+const UsersRoute = () => {
+    const security = useSecurity();
+    return <PrivateRoute children={<Users/>} roles={[
+        security.getRoles().ADMIN,
+        security.getRoles().SUPER_ADMIN
+    ]}/>;
+}
 
 export default App;

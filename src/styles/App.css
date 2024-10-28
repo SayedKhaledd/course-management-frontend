@@ -5,8 +5,6 @@
 }
 
 .sidebar {
-    width: fit-content;
-    flex-grow: 1;
     height: 100%;
 
 }

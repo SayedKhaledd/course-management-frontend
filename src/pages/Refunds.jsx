@@ -229,7 +229,7 @@ function Refunds() {
     return (
         <>
             <Table
-                header={'Refunds'}
+                header={<h2>Refunds</h2>}
                 columns={columns}
                 data={refunds}
                 onDeleteRow={onDeleteRow}

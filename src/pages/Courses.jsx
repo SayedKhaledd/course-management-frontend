@@ -105,7 +105,6 @@ function Courses() {
 
     };
 
-
     const cellHandlers = {
         onEdit, onSubmitEdit, onCancelEdit, onCellChange
     };
@@ -223,9 +222,9 @@ function Courses() {
     }
 
     return (
-        <div style={{padding: '16px'}}>
+        <>
             <Table
-                header={'Courses'}
+                header={<h2>Courses</h2>}
                 onDeleteRow={onDeleteRow}
                 columns={columns} data={courses} onRowClick={onRowClick} setNotification={setNotification}
                 paginatorLeftHandlers={{fetchCourses, fetchCourseOptions: fetchCourseStatusOptions}}
@@ -286,7 +285,7 @@ function Courses() {
             >
             </ConfirmDialog>
             <Notification status={notification.type} message={notification.message}/>
-        </div>
+        </>
     );
 }
 

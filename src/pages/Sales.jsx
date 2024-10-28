@@ -108,7 +108,7 @@ function Sales() {
     return (
         <>
             <Table
-                header={'Sales'}
+                header={<h2>Sales</h2>}
                 data={sales}
                 columns={columns}
                 paginatorLeftHandlers={[fetchSales]}

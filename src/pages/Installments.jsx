@@ -228,7 +228,7 @@ function Installments() {
     return (
         <>
             <Table
-                header={'Installments'}
+                header={<h2>Installments</h2>}
                 data={installments}
                 columns={columns}
                 onDeleteRow={onDeleteRow}

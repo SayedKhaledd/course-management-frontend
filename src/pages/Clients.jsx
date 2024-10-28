@@ -258,8 +258,7 @@ function Clients() {
         setConfirmDeleteDialog({visible: false, client: null});
     }
 
-    return (
-        <div style={{padding: '16px'}}>
+    return (<>
             <Table
                 header={<h2>Clients</h2>}
                 columns={columns} data={clients} onRowClick={onRowClick} onDeleteRow={onDeleteRow}
@@ -317,7 +316,7 @@ function Clients() {
             >
             </ConfirmDialog>
             <Notification status={notification.type} message={notification.message}/>
-        </div>
+        </>
     );
 }
 

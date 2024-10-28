@@ -41,8 +41,8 @@ const API_ENDPOINTS = {
 
     },
     createEnrollment: `${BASE_URL}/enrollment`,
-    clientHistoryByClientIdAndField: (clientId, fieldName) => `${BASE_URL}/client-history/client/${clientId}/field/${fieldName}`,
-    courseHistoryByCourseIdAndField: (courseId, fieldName) => `${BASE_URL}/course-history/course/${courseId}/field/${fieldName}`,
+    clientHistoryByClientIdAndField: (clientId, fieldName) => `${BASE_URL}/history/entity/${clientId}/entity-type/Client/field-name/${fieldName}`,
+    courseHistoryByCourseIdAndField: (courseId, fieldName) => `${BASE_URL}/history/entity/${courseId}/entity-type/Course/field-name/${fieldName}`,
     updateEnrollmentCourse: (enrollmentId, courseId) => `${BASE_URL}/enrollment/${enrollmentId}/course/${courseId}`,
     paymentMethods: `${BASE_URL}/payment-method/all`,
     paymentStatuses: `${BASE_URL}/payment-status/all`,
@@ -119,6 +119,8 @@ const API_ENDPOINTS = {
     getCourseDeleteEndpoint: (courseId) => `${BASE_URL}/course/${courseId}`,
     getInstallmentDeleteEndpoint: (installmentId) => `${BASE_URL}/installment/${installmentId}`,
     getCourseLecturerDeleteEndpoint: (courseLecturerId) => `${BASE_URL}/course-lecturer/${courseLecturerId}`,
+    users: `${BASE_URL}/user/all`,
+    roles: `${BASE_URL}/roles/all`
 
 };
 export default API_ENDPOINTS;

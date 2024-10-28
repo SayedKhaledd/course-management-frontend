@@ -1,8 +1,6 @@
 import 'jspdf';
 // import * as jspdf from 'jspdf-autotable';
 import jsPDF from "jspdf";
-import * as xlsx from "xlsx";
-import * as module from 'file-saver';
 import "jspdf-autotable";
 
 
@@ -44,11 +42,11 @@ export const downloadCSV = (data, columns, name) => {
     document.body.removeChild(link);
 }
 
-export const exportPdf = (exportColumns, data) => {
+export const exportPdf = (exportColumns, data, filename = 'exportedFile') => {
     const doc = new jsPDF('l');
     const columnStyles = {};
     exportColumns.forEach((col, index) => {
-        columnStyles[index] = {cellWidth: 25};
+        columnStyles[index] = {cellWidth: col.cellWidth || 'auto'};
     });
     doc.autoTable({
         head: [exportColumns.map(col => col.header)],
@@ -70,7 +68,7 @@ export const exportPdf = (exportColumns, data) => {
         width: 'auto'
     });
 
-    doc.save('products.pdf');
+    doc.save(filename + '.pdf');
 };
 
 export const genericSortFunction = (e, field, subField, nestedField = null) => {

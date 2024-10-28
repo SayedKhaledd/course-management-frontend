@@ -41,7 +41,7 @@ const Table = ({
                     onClick={() => downloadCSV(data, columns, downloadFileName)}
                     data-pr-tooltip="XLS"/>
             <Button type="button" icon="pi pi-file-pdf" severity="warning" rounded
-                    onClick={() => exportPdf(columns, data)}
+                    onClick={() => exportPdf(columns, data, downloadFileName)}
                     data-pr-tooltip="PDF"/>
         </div>
     );
