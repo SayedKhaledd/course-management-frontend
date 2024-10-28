@@ -17,7 +17,8 @@ const CellTemplate = (rowData, columnField, editingState, handlers, isEditable =
                 </>
             ) : (
                 <>
-                    <span className="cell-content">{rowData[columnField] + ""}</span>
+                    <span
+                        className="cell-content">{rowData[columnField] === null ? "" : rowData[columnField] + ""}</span>
                     {isEditable && (
                         <Button icon="pi pi-pencil" className="p-button-text p-button-secondary"
                                 style={{marginLeft: '8px'}}
