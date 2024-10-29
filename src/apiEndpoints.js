@@ -23,6 +23,8 @@ const API_ENDPOINTS = {
     updateEnrollmentReferralSource: (enrollmentId, updateId) => `${BASE_URL}/enrollment/${enrollmentId}/referral-source/${updateId}`,
     updateRefundReason: (refundId, updateId) => `${BASE_URL}/refund/${refundId}/refund-reason/${updateId}`,
     updateRefundPaymentMethod: (refundId, updateId) => `${BASE_URL}/refund/${refundId}/payment-method/${updateId}`,
+    updateRefundMethod: (refundId, updateId) => `${BASE_URL}/refund/${refundId}/refund-method/${updateId}`,
+    updateRefundStatus: (refundId, updateId) => `${BASE_URL}/refund/${refundId}/refund-status/${updateId}`,
     statuses: `${BASE_URL}/client-status/all`,
     referralSources: `${BASE_URL}/referral-source/all`,
     enrollmentsByClientId: (clientId) => `${BASE_URL}/enrollment/client/${clientId}`,
@@ -101,6 +103,10 @@ const API_ENDPOINTS = {
                 return API_ENDPOINTS.updateRefundReason(refundId, updateId);
             case 'paymentMethod':
                 return API_ENDPOINTS.updateRefundPaymentMethod(refundId, updateId);
+            case 'refundStatus':
+                return API_ENDPOINTS.updateRefundStatus(refundId, updateId);
+            case 'refundMethod':
+                return API_ENDPOINTS.updateRefundMethod(refundId, updateId);
 
             default:
                 return API_ENDPOINTS.updateRefundField(refundId, column.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase());
@@ -120,9 +126,11 @@ const API_ENDPOINTS = {
     getCourseLecturerDeleteEndpoint: (courseLecturerId) => `${BASE_URL}/course-lecturer/${courseLecturerId}`,
     users: `${BASE_URL}/user/all`,
     roles: `${BASE_URL}/roles/all`,
-    getUserUpdate: (userId, columnField) => `${BASE_URL}/user/${userId}/${columnField.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}` ,
+    getUserUpdate: (userId, columnField) => `${BASE_URL}/user/${userId}/${columnField.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}`,
     getDeleteUser: (userId) => `${BASE_URL}/user/${userId}`,
     createUser: `${BASE_URL}/user`,
+    refundStatuses: `${BASE_URL}/refund-status/all`,
 
+    getUpdateIsReceivedSales: (id, columnField, editedValue, paymentType) => `${BASE_URL}/sales/${id}/payment-type/${paymentType}/${columnField.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}/${editedValue}`,
 };
 export default API_ENDPOINTS;

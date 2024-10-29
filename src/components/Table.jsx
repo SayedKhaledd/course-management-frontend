@@ -13,8 +13,7 @@ const Table = ({
                    onDeleteRow,
                    paginatorLeftHandlers,
                    setNotification,
-                   downloadFileName = 'data'
-
+                   downloadFileName = 'data',
 
                }) => {
 
@@ -104,7 +103,7 @@ const Table = ({
                                     filterFunction={
                                         (value, filter) => {
                                             const nestedValue = value?.toLowerCase() ?? '';
-                                            return nestedValue.includes(filter.toLowerCase());
+                                            return nestedValue.startsWith(filter.toLowerCase());
                                         }
 
                                     }
@@ -122,11 +121,11 @@ const Table = ({
                                 filter={col.filter}
                                 sortable={col.sortable}
                                 sortFunction={col.sortFunction}
-                                filterMatchMode={!col.listFieldName ? 'contains' : 'custom'}
+                                filterMatchMode={!col.listFieldName  ? 'contains' : 'custom'}
                                 filterFunction={
                                     col.listFieldName ? (value, filter) => {
                                             const nestedValue = value?.[col.listFieldName]?.toLowerCase() ?? '';
-                                            return nestedValue.includes(filter.toLowerCase());
+                                            return nestedValue.startsWith(filter.toLowerCase());
                                         }
                                         : null
                                 }

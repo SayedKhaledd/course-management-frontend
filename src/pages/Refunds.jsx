@@ -20,6 +20,7 @@ function Refunds() {
     const [editingState, setEditingState] = useState({id: '', columnField: '', editedValue: null});
     const [clientOptions, setClientOptions] = useState([]);
     const [courseOptions, setCourseOptions] = useState([]);
+    const [refundStatusOptions, setRefundStatusOptions] = useState([]);
     const [paymentMethodOptions, setPaymentMethodOptions] = useState([]);
     const [refundReasonOptions, setRefundReasonOptions] = useState([]);
     const axios = useAxios();
@@ -49,6 +50,13 @@ function Refunds() {
             setPaymentMethodOptions(response.data.response);
         }).catch(error => setNotification({message: 'Failed to fetch payment method options ' + error, type: 'error'}));
     }
+    const fetchRefundStatusOptions = () => {
+        axios.get(apiEndpoints.refundStatuses).then(response => {
+            setRefundStatusOptions(response.data.response);
+        }).catch(error => setNotification({message: 'Failed to fetch refund status options ' + error, type: 'error'}));
+    }
+
+
     const fetchRefundReasonOptions = () => {
         axios.get(apiEndpoints.refundReasons).then(response => {
             setRefundReasonOptions(response.data.response);
@@ -83,16 +91,29 @@ function Refunds() {
                     editedValue: refundReasonOptions.find(option => option.reason === e.target.value)
                 });
                 break;
+            case 'refundMethod':
+                setEditingState({
+                    ...editingState,
+                    editedValue: paymentMethodOptions.find(option => option.method === e.target.value)
+                });
+                break;
+
+            case 'refundStatus':
+                setEditingState({
+                    ...editingState,
+                    editedValue: refundStatusOptions.find(option => option.status === e.target.value)
+                });
+                break;
+
         }
 
     }
 
     const onSubmitEdit = (id, columnField) => {
-        const endpoint = columnField === 'isConfirmed' ? apiEndpoints.updateRefundIsConfirmed(id, editingState.editedValue) : apiEndpoints.getRefundUpdateEndpoint(id, columnField, editingState.editedValue.id);
+        const endpoint = apiEndpoints.getRefundUpdateEndpoint(id, columnField, editingState.editedValue.id);
         if (editingState.editedValue !== '' && (columnField === 'refundDate')) {
             editingState.editedValue = new Date(editingState.editedValue).toISOString();
         }
-
 
         const payload = {[columnField]: editingState.editedValue};
         axios.patch(endpoint, payload).then(() => {
@@ -135,11 +156,18 @@ function Refunds() {
             body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'course', editingState, courseOptions, dropDownCellHandlers, 'name', false)
         },
         {
-            field: 'amount',
-            header: 'Amount',
+            field: 'refundedAmount',
+            header: 'Refunded Amount',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'amount', editingState, handlers)
+            body: (rowData) => CellTemplate(rowData, 'refundedAmount', editingState, handlers)
+        },
+        {
+            field: 'enrollmentAmount',
+            header: 'Enrollment Amount',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'enrollmentAmount', editingState, handlers)
         },
         {
             field: 'refundDate',
@@ -155,22 +183,31 @@ function Refunds() {
             filter: true,
             sortable: true,
             sortFunction: (e) => genericSortFunction(e, 'refundReason', 'reason'),
-            body: (rowData) => DropDownCellTemplate(rowData, 'refundReason', 'refundReason', editingState, refundReasonOptions, dropDownCellHandlers,)
+            body: (rowData) => DropDownCellTemplate(rowData, 'refundReason', 'reason', editingState, refundReasonOptions, dropDownCellHandlers,)
         },
         {
-            field: 'explanation',
-            header: 'Explanation',
+            field: 'firstExplanation',
+            header: 'First Explanation',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'explanation', editingState, handlers)
+            body: (rowData) => CellTemplate(rowData, 'firstExplanation', editingState, handlers)
+        },
+        {
+            field: 'secondExplanation',
+            header: 'Second Explanation',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'secondExplanation', editingState, handlers)
         },
         //is confirmed
         {
-            field: 'isConfirmed',
-            header: 'Is Confirmed',
+            field: 'refundStatus',
+            header: 'Refund Status',
+            listFieldName: 'status',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'isConfirmed', editingState, handlers)
+            sortFunction: (e) => genericSortFunction(e, 'refundStatus', 'status'),
+            body: (rowData) => DropDownCellTemplate(rowData, 'refundStatus', 'status', editingState, refundStatusOptions, dropDownCellHandlers, false)
         },
         //PAYMENT METHOD
         {
@@ -180,7 +217,16 @@ function Refunds() {
             filter: true,
             sortable: true,
             sortFunction: (e) => genericSortFunction(e, 'paymentMethod', 'method'),
-            body: (rowData) => DropDownCellTemplate(rowData, 'paymentMethod', 'method', editingState, paymentMethodOptions, dropDownCellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'paymentMethod', 'method', editingState, paymentMethodOptions, dropDownCellHandlers, false)
+        },
+        {
+            field: 'refundMethod',
+            header: 'Refund Method',
+            listFieldName: 'method',
+            filter: true,
+            sortable: true,
+            sortFunction: (e) => genericSortFunction(e, 'refundMethod', 'method'),
+            body: (rowData) => DropDownCellTemplate(rowData, 'refundMethod', 'method', editingState, paymentMethodOptions, dropDownCellHandlers)
         },
 
     ]
@@ -222,6 +268,7 @@ function Refunds() {
         fetchCourseOptions();
         fetchPaymentMethodOptions();
         fetchRefundReasonOptions();
+        fetchRefundStatusOptions();
 
     }, []);
 

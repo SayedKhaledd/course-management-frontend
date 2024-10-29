@@ -15,6 +15,7 @@ import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import CellTemplate from "../templates/CellTemplate.jsx";
 import {genericSortFunction, simplifyDate} from "../utils.js";
 import {ConfirmDialog} from "primereact/confirmdialog";
+import {TRUE_FALSE_OPTIONS} from "../constants.js";
 
 const CourseDetails = () => {
     const location = useLocation();
@@ -64,7 +65,13 @@ const CourseDetails = () => {
 
     const fetchEnrollments = () => {
         axios.get(apiEndpoints.enrollmentsByCourseId(id))
-            .then(response => setEnrollments(response.data.response))
+            .then(response => {
+                setEnrollments(response.data.response.map(enrollment => ({
+                    ...enrollment,
+                    insideEgypt: enrollment.insideEgypt ? "Yes" : "No",
+                    payInInstallments: enrollment.payInInstallments ? "Yes" : "No"
+                })));
+            })
             .catch(error => setNotification({message: 'Failed to fetch enrollments ' + error, type: 'error'}));
     }
     const fetchClientOptions = () => {
@@ -79,7 +86,10 @@ const CourseDetails = () => {
     const fetchCourseLecturers = () => {
         axios.get(apiEndpoints.courseLecturersByCourseId(id))
             .then(response => {
-                setCourseLecturers(response.data.response);
+                setCourseLecturers(response.data.response.map(courseLecturer => ({
+                    ...courseLecturer,
+                    paidInPercentage: courseLecturer.paidInPercentage ? "Yes" : "No"
+                })));
             }).catch(error => {
             setNotification({message: 'Failed to fetch course lecturers' + error, type: 'error'});
         });
@@ -190,9 +200,12 @@ const CourseDetails = () => {
     };
 
     const onSubmitEdit = async (enrollmentId, columnField) => {
-        let endpoint = apiEndpoints.getEnrollmentUpdateEndpoint(enrollmentId, columnField, editingEnrollmentState.editedValue.id);
-        if (columnField === 'payInInstallments') {
+        let endpoint;
+        if (columnField === 'payInInstallments' || columnField === 'insideEgypt') {
+            editingEnrollmentState.editedValue = editingEnrollmentState.editedValue === "Yes";
             endpoint = apiEndpoints.updateEnrollmentFieldBoolean(enrollmentId, columnField, editingEnrollmentState.editedValue);
+        } else {
+            endpoint = apiEndpoints.getEnrollmentUpdateEndpoint(enrollmentId, columnField, editingEnrollmentState.editedValue?.id);
         }
         const payload = {[columnField]: editingEnrollmentState.editedValue};
         axios.patch(endpoint, payload).then(() => {
@@ -239,6 +252,24 @@ const CourseDetails = () => {
                     editedValue: actionOptions.find(option => option.action === e.target.value)
                 });
                 break;
+            case 'insideEgypt':
+                setEditingEnrollmentState({
+                    ...editingEnrollmentState,
+                    editedValue: e.target.value
+                });
+                break;
+            case 'payInInstallments':
+                setEditingEnrollmentState({
+                    ...editingEnrollmentState,
+                    editedValue: e.target.value
+                });
+                break;
+            case 'paidInPercentage':
+                setEditingCourseLecturerState({
+                    ...editingCourseLecturerState,
+                    editedValue: e.target.value
+                });
+                break;
 
         }
 
@@ -282,7 +313,7 @@ const CourseDetails = () => {
             header: 'Pay in Installments',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'payInInstallments', editingEnrollmentState, cellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'payInInstallments', null, editingEnrollmentState, TRUE_FALSE_OPTIONS, cellHandlers)
         },
         {
             field: 'discount',
@@ -356,6 +387,13 @@ const CourseDetails = () => {
             body: (rowData) => CellTemplate(rowData, 'description', editingEnrollmentState, cellHandlers)
         },
         {
+            field: 'insideEgypt',
+            header: 'Is inside Egypt?',
+            filter: true,
+            sortable: true,
+            body: (rowData) => DropDownCellTemplate(rowData, 'insideEgypt', null, editingEnrollmentState, TRUE_FALSE_OPTIONS, dropDownCellHandlers)
+        },
+        {
             field: 'createdDate',
             header: 'Created Date',
             filter: true,
@@ -405,7 +443,8 @@ const CourseDetails = () => {
     }
 
     const onSubmitEditCourseLecturer = async (courseLecturerId, columnField) => {
-        const endpoint = columnField === 'paidInPercentage' ? apiEndpoints.updateCourseLecturerPaidStatus(courseLecturerId, editingCourseLecturerState.editedValue) : apiEndpoints.updateCourseLecturerField(courseLecturerId, columnField);
+        const endpoint = columnField === 'paidInPercentage' ? apiEndpoints.updateCourseLecturerPaidStatus(courseLecturerId, editingCourseLecturerState.editedValue === 'Yes')
+            : apiEndpoints.updateCourseLecturerField(courseLecturerId, columnField);
         const payload = {[columnField]: editingCourseLecturerState.editedValue};
         axios.patch(endpoint, payload).then(() => {
             fetchCourseLecturers();
@@ -424,6 +463,14 @@ const CourseDetails = () => {
         onCellChange: onCellChangeCourseLecturer
     };
 
+    const courseLecturersCellOptionsHandlers = {
+        onEdit: onEditCourseLecturer,
+        onSubmitEdit: onSubmitEditCourseLecturer,
+        onCancelEdit: onCancelEditCourseLecturer,
+        onCellChange: onCellChangeCourseLecturer,
+        onOptionChange: onDropDownChange
+    }
+
     //course lecturers columns
     const courseLecturersColumns = [
         {
@@ -438,7 +485,7 @@ const CourseDetails = () => {
             header: 'Paid In Percentage',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'paidInPercentage', editingCourseLecturerState, courseLecturersCellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'paidInPercentage', null, editingCourseLecturerState, TRUE_FALSE_OPTIONS, courseLecturersCellOptionsHandlers)
         },
         {
             field: 'percentage',
@@ -448,11 +495,32 @@ const CourseDetails = () => {
             body: (rowData) => CellTemplate(rowData, 'percentage', editingCourseLecturerState, courseLecturersCellHandlers)
         },
         {
-            field: 'fixedValue',
-            header: 'Fixed Value',
+            field: 'totalPercentageCost',
+            header: 'Total Percentage Cost',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'fixedValue', editingCourseLecturerState, courseLecturersCellHandlers)
+            body: (rowData) => CellTemplate(rowData, 'totalPercentageCost', editingCourseLecturerState, courseLecturersCellHandlers, false)
+        },
+        {
+            field: 'noOfLectures',
+            header: 'No. of Lectures',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'noOfLectures', editingCourseLecturerState, courseLecturersCellHandlers)
+        },
+        {
+            field: 'lectureCost',
+            header: 'Lecture Cost',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'lectureCost', editingCourseLecturerState, courseLecturersCellHandlers)
+        },
+        {
+            field: 'totalFixedCost',
+            header: 'Total Fixed Cost',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'totalFixedCost', editingCourseLecturerState, courseLecturersCellHandlers, false)
         },
         {
             field: 'createdDate',

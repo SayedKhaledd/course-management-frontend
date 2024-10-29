@@ -14,6 +14,7 @@ import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import Table from "../components/Table.jsx";
 import {genericSortFunction, simplifyDate} from "../utils.js";
 import {ConfirmDialog} from "primereact/confirmdialog";
+import {COUNTRIES, NATIONALITIES} from "../constants.js";
 
 
 function Clients() {
@@ -27,6 +28,7 @@ function Clients() {
     const [notification, setNotification] = useState({message: '', type: ''});
     const [displayDialog, setDisplayDialog] = useState(false);
     const [confirmDeleteDialog, setConfirmDeleteDialog] = useState({visible: false, client: null});
+    const [filters, setFilters] = useState({});
 
 
     const fetchClients = () => {
@@ -60,6 +62,9 @@ function Clients() {
         fetchClients();
         fetchStatusOptions();
         fetchReferralSourceOptions();
+        setFilters({
+            createdDate: {value: new Date().toISOString().split('T')[0], matchMode: 'contains'}  // Set the default filter value and mode here
+        });
     }, []);
 
     const onEdit = (id, columnField, editedValue) => {
@@ -97,6 +102,18 @@ function Clients() {
                 setEditingState({
                     ...editingState,
                     editedValue: referralSourceOptions.find(option => option.source === e.target.value)
+                });
+                break;
+            case 'country':
+                setEditingState({
+                    ...editingState,
+                    editedValue: COUNTRIES.find(option => option === e.target.value)
+                });
+                break;
+            case 'nationality':
+                setEditingState({
+                    ...editingState,
+                    editedValue: NATIONALITIES.find(option => option === e.target.value)
                 });
                 break;
         }
@@ -142,6 +159,13 @@ function Clients() {
             body: (rowData) => CellTemplate(rowData, 'alternativePhone', editingState, cellHandlers)
         },
         {
+            field: 'initialCourseName',
+            header: 'Initial Course',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'initialCourseName', editingState, cellHandlers)
+        },
+        {
             field: 'clientStatus',
             header: 'Status',
             listFieldName: 'status',
@@ -168,14 +192,14 @@ function Clients() {
             header: 'Country',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'country', editingState, cellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'country', null, editingState, COUNTRIES, dropDownCellHandlers)
         },
         {
             field: 'nationality',
             header: 'Nationality',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'nationality', editingState, cellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'nationality', null, editingState, NATIONALITIES, dropDownCellHandlers)
         },
         {
             field: 'address',
@@ -265,6 +289,7 @@ function Clients() {
                 setNotification={setNotification}
                 paginatorLeftHandlers={{fetchClients, fetchStatusOptions}}
                 downloadFileName="clients"
+                filters={filters}
             ></Table>
             <Button
                 icon="pi pi-plus"
@@ -280,7 +305,6 @@ function Clients() {
                 modal
                 onHide={closeDialog}
             >
-                {/* Card inside the dialog for the client creation form */}
                 <Card title="Client Details">
                     <div className="p-fluid">
                         <div className="p-field">
@@ -297,6 +321,15 @@ function Clients() {
                             <label htmlFor="phone">Phone</label>
                             <InputText id="phone"
                                        onInput={(e) => setNewClient({...newClient, phone: e.target.value})}/>
+                        </div>
+
+                        <div className="p-field">
+                            <label htmlFor="initialCourseName">Initial Course Name</label>
+                            <InputText id="initialCourseName"
+                                       onInput={(e) => setNewClient({
+                                           ...newClient,
+                                           initialCourseName: e.target.value
+                                       })}/>
                         </div>
 
                         <div className="p-d-flex p-jc-end">

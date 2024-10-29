@@ -25,3 +25,18 @@ export const PAGINATION_REQUEST = [
     "sortBy",
     "sortDesc"
 ]
+
+export const COUNTRIES = [
+    "EGYPT",
+    "SAUDI_ARABIA",
+    "UNITED_ARAB_EMIRATES",
+    "OTHER"]
+export const NATIONALITIES = [
+    "EGYPTIAN",
+    "SAUDI",
+    "EMIRATE",
+    "OTHER"]
+
+export const TRUE_FALSE_OPTIONS = [
+    "Yes", "No"
+]

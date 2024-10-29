@@ -5,11 +5,14 @@ import useAxios from "../hooks/useAxios.js";
 import 'primeicons/primeicons.css';
 import Table from "../components/Table.jsx";
 import Notification from "../components/Notification.jsx";
-import apiEndpoints from "../apiEndpoints.js"; // For using icons
+import apiEndpoints from "../apiEndpoints.js";
+import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
+import {TRUE_FALSE_OPTIONS} from "../constants.js";
+import {simplifyDate} from "../utils.js"; // For using icons
 
 function Sales() {
     const [notification, setNotification] = useState({message: '', type: ''});
-
+    const [editingState, setEditingState] = useState({id: null, columnField: null, editedValue: null});
 
     const [sales, setSales] = useState([]);
     const axios = useAxios();
@@ -17,8 +20,12 @@ function Sales() {
     const fetchSales = () => {
         axios.get(apiEndpoints.sales)
             .then(response => {
-                setSales(response.data.response);
-            }).catch(error =>
+                    setSales(response.data.response.map(sales => ({
+                        ...sales,
+                        isReceived: sales.isReceived ? "Yes" : "No"
+                    })));
+                }
+            ).catch(error =>
             setNotification({message: 'Failed to fetch sales ' + error, type: 'error'})
         );
     }
@@ -27,6 +34,42 @@ function Sales() {
         fetchSales();
 
     }, []);
+
+
+    const onEdit = (id, columnField, editedValue) => {
+        setEditingState({id, columnField, editedValue});
+    }
+
+    const onCancelEdit = () => {
+        setEditingState({id: '', columnField: '', editedValue: null});
+    }
+
+    const onSubmitEdit = (id, columnField) => {
+        const endpoint = apiEndpoints.getUpdateIsReceivedSales(id, columnField, editingState.editedValue,
+            sales[sales.findIndex(sale => sale.id === id)]['paymentType']);
+        editingState.editedValue = editingState.editedValue === "Yes";
+
+        axios.patch(endpoint).then(() => {
+            fetchSales();
+            onCancelEdit();
+            setNotification({message: `Updated ${columnField} successfully`, type: 'success'});
+
+        }).catch(error =>
+            setNotification({message: `Failed to update ${columnField}: ${error}`, type: 'error'})
+        );
+    }
+
+    const onDropDownChange = (e, columnField) => {
+        setEditingState({
+            ...editingState,
+            editedValue: e.target.value
+        });
+    }
+
+
+    const dropDownCellHandlers = {
+        onEdit, onSubmitEdit, onCancelEdit, onOptionChange: onDropDownChange
+    }
 
     //clientName, course name, course code, amount, payment type, payment method, date, currency
     const columns = [
@@ -90,7 +133,7 @@ function Sales() {
             sortable: true,
             filter: true,
             body: (rowData) => {
-                return rowData.date
+                return simplifyDate(rowData.date)
             }
         },
         {
@@ -100,6 +143,15 @@ function Sales() {
             filter: true,
             body: (rowData) => {
                 return rowData.currency
+            }
+        },
+        {
+            field: 'isReceived',
+            header: 'Is Received',
+            sortable: true,
+            filter: true,
+            body: (rowData) => {
+                return DropDownCellTemplate(rowData, 'isReceived', null, editingState, TRUE_FALSE_OPTIONS, dropDownCellHandlers);
             }
         },
     ]
@@ -113,6 +165,7 @@ function Sales() {
                 columns={columns}
                 paginatorLeftHandlers={[fetchSales]}
                 downloadFileName={'sales'}
+                setNotification={setNotification}
 
             ></Table>
 

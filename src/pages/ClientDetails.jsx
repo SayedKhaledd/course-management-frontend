@@ -16,6 +16,7 @@ import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import CellTemplate from "../templates/CellTemplate.jsx";
 import HistoryDialog from "../components/HistoryDialog.jsx";
 import {ConfirmDialog} from "primereact/confirmdialog";
+import {TRUE_FALSE_OPTIONS} from "../constants.js";
 
 
 const ClientDetails = () => {
@@ -51,7 +52,13 @@ const ClientDetails = () => {
 
     const fetchEnrollments = () => {
         axios.get(apiEndpoints.enrollmentsByClientId(id))
-            .then(response => setEnrollments(response.data.response))
+            .then(response => {
+                setEnrollments(response.data.response.map(enrollment => ({
+                    ...enrollment,
+                    insideEgypt: enrollment.insideEgypt ? "Yes" : "No",
+                    payInInstallments: enrollment.payInInstallments ? "Yes" : "No"
+                })));
+            })
             .catch(error => {
                 setNotification({message: 'Failed to fetch enrollments' + error, type: 'error'});
             });
@@ -151,9 +158,12 @@ const ClientDetails = () => {
     };
 
     const onSubmitEdit = async (enrollmentId, columnField) => {
-        let endpoint = apiEndpoints.getEnrollmentUpdateEndpoint(enrollmentId, columnField, editingEnrollmentState.editedValue.id);
-        if (columnField === 'payInInstallments') {
+        let endpoint;
+        if (columnField === 'payInInstallments' || columnField === 'insideEgypt') {
+            editingEnrollmentState.editedValue = editingEnrollmentState.editedValue === "Yes";
             endpoint = apiEndpoints.updateEnrollmentFieldBoolean(enrollmentId, columnField, editingEnrollmentState.editedValue);
+        } else {
+            endpoint = apiEndpoints.getEnrollmentUpdateEndpoint(enrollmentId, columnField, editingEnrollmentState.editedValue?.id);
         }
         const payload = {[columnField]: editingEnrollmentState.editedValue};
         axios.patch(endpoint, payload).then(() => {
@@ -167,6 +177,7 @@ const ClientDetails = () => {
 
     };
     const onDropDownChange = (e, columnField) => {
+        console.log(e.target.value);
         switch (columnField) {
             case 'course':
                 setEditingEnrollmentState({
@@ -200,8 +211,21 @@ const ClientDetails = () => {
                     editedValue: actionOptions.find(option => option.action === e.target.value)
                 });
                 break;
+            case 'insideEgypt':
+                setEditingEnrollmentState({
+                    ...editingEnrollmentState,
+                    editedValue: e.target.value
+                });
+                break;
+            case 'payInInstallments':
+                setEditingEnrollmentState({
+                    ...editingEnrollmentState,
+                    editedValue: e.target.value
+                });
+
 
         }
+        console.log("current state", editingEnrollmentState.editedValue)
 
     };
 
@@ -256,7 +280,7 @@ const ClientDetails = () => {
             header: 'Pay in Installments',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'payInInstallments', editingEnrollmentState, cellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'payInInstallments', null, editingEnrollmentState, TRUE_FALSE_OPTIONS, dropDownCellHandlers)
         },
         {
             field: 'discount',
@@ -329,6 +353,14 @@ const ClientDetails = () => {
             sortable: true,
             body: (rowData) => CellTemplate(rowData, 'description', editingEnrollmentState, cellHandlers)
         },
+        {
+            field: 'insideEgypt',
+            header: 'Is inside Egypt?',
+            filter: true,
+            sortable: true,
+            body: (rowData) => DropDownCellTemplate(rowData, 'insideEgypt', null, editingEnrollmentState, TRUE_FALSE_OPTIONS, dropDownCellHandlers)
+        },
+
         {
             field: 'createdDate',
             header: 'Created Date',
@@ -533,9 +565,9 @@ const ClientDetails = () => {
             <Table
                 header={'Enrollments'}
                 data={enrollments} columns={columns} paginatorLeftHandlers={fetchEnrollments}
-                   downloadFileName={'enrollments'}
-                   setNotification={setNotification}
-                     onDeleteRow={onDeleteRow}
+                downloadFileName={'enrollments'}
+                setNotification={setNotification}
+                onDeleteRow={onDeleteRow}
 
             ></Table>
 
