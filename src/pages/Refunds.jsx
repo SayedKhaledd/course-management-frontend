@@ -281,6 +281,7 @@ function Refunds() {
                 data={refunds}
                 onDeleteRow={onDeleteRow}
                 downloadFileName={'refunds'}
+                setNotification={setNotification}
                 paginatorLeftHandlers={[fetchRefunds, fetchClientOptions, fetchCourseOptions, fetchPaymentMethodOptions, fetchRefundReasonOptions]}
 
 
@@ -335,9 +336,9 @@ function Refunds() {
                                       })}/>
                         </div>
                         <div className="p-field">
-                            <label htmlFor="amount">amount</label>
-                            <InputText id="amount"
-                                       onInput={(e) => setNewRefund({...newRefund, amount: e.target.value})}/>
+                            <label htmlFor="refundedAmount">Refunded Amount</label>
+                            <InputText id="refundedAmount"
+                                       onInput={(e) => setNewRefund({...newRefund, refundedAmount: e.target.value})}/>
                         </div>
 
                         <div className="p-d-flex p-jc-end">
