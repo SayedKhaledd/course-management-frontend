@@ -273,7 +273,14 @@ const ClientDetails = () => {
             header: 'Remaining Amount',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'remainingAmount', editingEnrollmentState, cellHandlers)
+            body: (rowData) => CellTemplate(rowData, 'remainingAmount', editingEnrollmentState, cellHandlers, false)
+        },
+        {
+            field: 'totalAmount',
+            header: 'Total Amount',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'totalAmount', editingEnrollmentState, cellHandlers, false)
         },
         {
             field: 'payInInstallments',

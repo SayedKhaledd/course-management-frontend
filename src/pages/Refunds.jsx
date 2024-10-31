@@ -53,7 +53,7 @@ function Refunds() {
     }
     const fetchRefundMethodOptions = () => {
         axios.get(apiEndpoints.refundMethods).then(response => {
-            setPaymentMethodOptions(response.data.response);
+            setRefundMethodOptions(response.data.response);
         }).catch(error => setNotification({message: 'Failed to fetch payment method options ' + error, type: 'error'}));
     }
 
@@ -175,7 +175,7 @@ function Refunds() {
             header: 'Enrollment Amount',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'enrollmentAmount', editingState, handlers)
+            body: (rowData) => CellTemplate(rowData, 'enrollmentAmount', editingState, handlers, false)
         },
         {
             field: 'refundDate',
@@ -191,7 +191,7 @@ function Refunds() {
             filter: true,
             sortable: true,
             sortFunction: (e) => genericSortFunction(e, 'refundReason', 'reason'),
-            body: (rowData) => DropDownCellTemplate(rowData, 'refundReason', 'reason', editingState, refundReasonOptions, dropDownCellHandlers,)
+            body: (rowData) => DropDownCellTemplate(rowData, 'refundReason', 'reason', editingState, refundReasonOptions, dropDownCellHandlers)
         },
         {
             field: 'firstExplanation',
@@ -225,7 +225,7 @@ function Refunds() {
             filter: true,
             sortable: true,
             sortFunction: (e) => genericSortFunction(e, 'paymentMethod', 'method'),
-            body: (rowData) => DropDownCellTemplate(rowData, 'paymentMethod', 'method', editingState, paymentMethodOptions, dropDownCellHandlers, false)
+            body: (rowData) => DropDownCellTemplate(rowData, 'paymentMethod', 'method', editingState, paymentMethodOptions, dropDownCellHandlers, false, false)
         },
         {
             field: 'refundMethod',
