@@ -8,6 +8,7 @@ import {Button} from "primereact/button";
 import HistoryDialog from "./HistoryDialog.jsx";
 import Notification from "./Notification.jsx";
 import {useParams} from "react-router-dom";
+import CardDetails from "./CardDetails.jsx";
 
 const ClientDetailsCard = ({}) => {
     const [client, setClient] = useState({});
@@ -60,10 +61,45 @@ const ClientDetailsCard = ({}) => {
             .catch(error => setNotification({message: 'Failed to fetch history' + error, type: 'error'}));
     };
 
+
+    const onDropDownChange = (e, columnField) => {
+        setClient({...client, [columnField]: e.target.value});
+
+    };
+
+    const cellHandlers = {
+        onEdit: handleInputChange, onSubmitEdit: handleSave, onShowHistory: showHistory
+    };
+    const dropDownCellHandlers = {
+        onEdit: handleInputChange,
+        onSubmitEdit: handleSave,
+        onShowHistory: showHistory,
+        onOptionChange: onDropDownChange
+    }
+
+
+    const columns = [
+        {
+            field: 'name', type: 'text',
+            handlers: cellHandlers
+        },
+        {field: 'email', type: 'text'},
+        {field: 'phone', type: 'text'},
+        {field: 'alternativePhone', type: 'text'},
+        // {field: 'country', type
+    ]
+
+
     if (!client) return null;
 
     return (
         <>
+            <CardDetails header="Client Details" data={client} columns={columns}
+            notification={notification}
+
+            />
+
+
             <Card className="p-m-4" title="Client Details">
                 <div className="p-d-flex p-ai-center p-mb-3">
                     <Avatar label="JD" className="p-mr-3" size="large" shape="circle"/>
