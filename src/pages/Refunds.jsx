@@ -22,6 +22,7 @@ function Refunds() {
     const [courseOptions, setCourseOptions] = useState([]);
     const [refundStatusOptions, setRefundStatusOptions] = useState([]);
     const [paymentMethodOptions, setPaymentMethodOptions] = useState([]);
+    const [refundMethodOptions, setRefundMethodOptions] = useState([]);
     const [refundReasonOptions, setRefundReasonOptions] = useState([]);
     const axios = useAxios();
     const [notification, setNotification] = useState({message: '', type: ''});
@@ -50,6 +51,13 @@ function Refunds() {
             setPaymentMethodOptions(response.data.response);
         }).catch(error => setNotification({message: 'Failed to fetch payment method options ' + error, type: 'error'}));
     }
+    const fetchRefundMethodOptions = () => {
+        axios.get(apiEndpoints.refundMethods).then(response => {
+            setPaymentMethodOptions(response.data.response);
+        }).catch(error => setNotification({message: 'Failed to fetch payment method options ' + error, type: 'error'}));
+    }
+
+
     const fetchRefundStatusOptions = () => {
         axios.get(apiEndpoints.refundStatuses).then(response => {
             setRefundStatusOptions(response.data.response);
@@ -94,7 +102,7 @@ function Refunds() {
             case 'refundMethod':
                 setEditingState({
                     ...editingState,
-                    editedValue: paymentMethodOptions.find(option => option.method === e.target.value)
+                    editedValue: refundMethodOptions.find(option => option.method === e.target.value)
                 });
                 break;
 
@@ -226,7 +234,7 @@ function Refunds() {
             filter: true,
             sortable: true,
             sortFunction: (e) => genericSortFunction(e, 'refundMethod', 'method'),
-            body: (rowData) => DropDownCellTemplate(rowData, 'refundMethod', 'method', editingState, paymentMethodOptions, dropDownCellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'refundMethod', 'method', editingState, refundMethodOptions, dropDownCellHandlers)
         },
 
     ]
@@ -269,6 +277,7 @@ function Refunds() {
         fetchPaymentMethodOptions();
         fetchRefundReasonOptions();
         fetchRefundStatusOptions();
+        fetchRefundMethodOptions();
 
     }, []);
 

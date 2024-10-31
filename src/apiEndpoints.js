@@ -46,6 +46,7 @@ const API_ENDPOINTS = {
     courseHistoryByCourseIdAndField: (courseId, fieldName) => `${BASE_URL}/history/entity/${courseId}/entity-type/Course/field-name/${fieldName}`,
     updateEnrollmentCourse: (enrollmentId, courseId) => `${BASE_URL}/enrollment/${enrollmentId}/course/${courseId}`,
     paymentMethods: `${BASE_URL}/payment-method/all`,
+    refundMethods: `${BASE_URL}/refund-method/all`,
     paymentStatuses: `${BASE_URL}/payment-status/all`,
     actionTaken: `${BASE_URL}/action-taken/all`,
     createCourse: `${BASE_URL}/course`,

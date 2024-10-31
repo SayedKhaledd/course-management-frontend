@@ -14,7 +14,8 @@ import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import Table from "../components/Table.jsx";
 import {genericSortFunction, simplifyDate} from "../utils.js";
 import {ConfirmDialog} from "primereact/confirmdialog";
-import {COUNTRIES, NATIONALITIES} from "../constants.js";
+import {COUNTRIES, INITIAL_COURSES, NATIONALITIES} from "../constants.js";
+import {Dropdown} from "primereact/dropdown";
 
 
 function Clients() {
@@ -116,6 +117,12 @@ function Clients() {
                     editedValue: NATIONALITIES.find(option => option === e.target.value)
                 });
                 break;
+            case 'initialCourseName':
+                setEditingState({
+                    ...editingState,
+                    editedValue: INITIAL_COURSES.find(option => option === e.target.value)
+                });
+                break;
         }
 
     };
@@ -163,7 +170,7 @@ function Clients() {
             header: 'Initial Course',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'initialCourseName', editingState, cellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'initialCourseName', null, editingState, INITIAL_COURSES, dropDownCellHandlers)
         },
         {
             field: 'clientStatus',
@@ -325,11 +332,15 @@ function Clients() {
 
                         <div className="p-field">
                             <label htmlFor="initialCourseName">Initial Course Name</label>
-                            <InputText id="initialCourseName"
-                                       onInput={(e) => setNewClient({
-                                           ...newClient,
-                                           initialCourseName: e.target.value
-                                       })}/>
+                            <Dropdown id="initialCourseName"
+                                      options={INITIAL_COURSES}
+                                      value={newClient.initialCourseName || ''}
+                                      onChange={(e) => setNewClient({
+                                          ...newClient,
+                                          initialCourseName: e.target.value
+                                      })}/>
+
+
                         </div>
 
                         <div className="p-d-flex p-jc-end">

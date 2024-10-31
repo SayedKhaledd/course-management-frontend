@@ -13,6 +13,8 @@ import {genericSortFunction, simplifyDate} from "../utils.js";
 import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import {useNavigate} from "react-router-dom";
 import {ConfirmDialog} from "primereact/confirmdialog";
+import {COURSE_PARTS} from "../constants.js";
+import {Dropdown} from "primereact/dropdown";
 
 function Courses() {
 
@@ -101,6 +103,11 @@ function Courses() {
                     editedValue: courseStatusOptions.find(option => option.status === e.target.value)
                 });
                 break;
+            case 'part':
+                setEditingState({
+                    ...editingState,
+                    editedValue: COURSE_PARTS.find(part => part === e.target.value)
+                });
         }
 
     };
@@ -132,7 +139,7 @@ function Courses() {
             header: 'Part',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'part', editingState, cellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'part', null, editingState, COURSE_PARTS, dropDownCellHandlers)
         },
         {
             field: 'price',
@@ -259,8 +266,11 @@ function Courses() {
                         </div>
                         <div className="p-field">
                             <label htmlFor="part">Part</label>
-                            <InputText id="part"
-                                       onInput={(e) => setNewCourse({...newCourse, part: e.target.value})}/>
+                            <Dropdown id="part"
+                                      options={COURSE_PARTS}
+                                      value={newCourse.part || ''}
+                                      onChange={(e) => setNewCourse({...newCourse, part: e.target.value})}/>
+
                         </div>
                         <div className="p-field">
                             <label htmlFor="price">Price</label>
