@@ -133,5 +133,6 @@ const API_ENDPOINTS = {
     refundStatuses: `${BASE_URL}/refund-status/all`,
 
     getUpdateIsReceivedSales: (id, columnField, editedValue, paymentType) => `${BASE_URL}/sales/${id}/payment-type/${paymentType}/${columnField.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}/${editedValue}`,
+    getPaginatedClients:`${BASE_URL}/client/find-paginated-and-filtered`,
 };
 export default API_ENDPOINTS;

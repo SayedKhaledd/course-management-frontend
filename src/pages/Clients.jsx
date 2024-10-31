@@ -30,13 +30,31 @@ function Clients() {
     const [displayDialog, setDisplayDialog] = useState(false);
     const [confirmDeleteDialog, setConfirmDeleteDialog] = useState({visible: false, client: null});
     const [filters, setFilters] = useState({});
+    const [totalRecords, setTotalRecords] = useState(0);
+    const [loading, setLoading] = useState(true);
 
 
     const fetchClients = () => {
-        axios.get(apiEndpoints.clients,)
-            .then(response => setClients(response.data.response))
-            .catch(error =>
-                setNotification({message: `Failed to fetch clients: ${error}`, type: 'error'})
+        setLoading(true);
+        console.log("apiEndpoints.getPaginatedClients", apiEndpoints.getPaginatedClients);
+        axios.post(apiEndpoints.getPaginatedClients, {
+            pageNumber: 1,
+            pageSize: 2,
+            deletedRecords: false,
+            sortBy: "name",
+            sortDesc: true
+
+        })
+            .then(response => {
+                setClients(response.data.response.result)
+                setTotalRecords(response.data.response.totalNumberOfElements); // Set total records for pagination
+                setLoading(false);
+            })
+            .catch(error => {
+                    console.log(error);
+                    setNotification({message: `Failed to fetch clients: ${error}`, type: 'error'});
+
+                }
             )
     };
     const fetchReferralSourceOptions = () => {
@@ -288,6 +306,25 @@ function Clients() {
     const cancelDeleteClient = () => {
         setConfirmDeleteDialog({visible: false, client: null});
     }
+    const onPage = (e) => {
+        setLoading(true);
+        axios.post(apiEndpoints.getPaginatedClients, {
+            pageNumber: e.page + 1,
+            pageSize: e.rows,
+            deletedRecords: false,
+            sortBy: "name",
+            sortDesc: true
+        })
+            .then(response => {
+                setClients(response.data.response.result)
+                setLoading(false);
+            })
+            .catch(error => {
+
+                    setNotification({message: `Failed to fetch clients: ${error}`, type: 'error'});
+                }
+            )
+    }
 
     return (<>
             <Table
@@ -295,6 +332,9 @@ function Clients() {
                 columns={columns} data={clients} onRowClick={onRowClick} onDeleteRow={onDeleteRow}
                 setNotification={setNotification}
                 paginatorLeftHandlers={{fetchClients, fetchStatusOptions}}
+                totalRecords={totalRecords}
+                onPage={onPage}
+                loading={loading}
                 downloadFileName="clients"
                 filters={filters}
             ></Table>

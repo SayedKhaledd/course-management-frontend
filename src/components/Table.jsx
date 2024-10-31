@@ -13,6 +13,9 @@ const Table = ({
                    onDeleteRow,
                    paginatorLeftHandlers,
                    setNotification,
+                   loading,
+                   totalRecords,
+                   onPage,
                    downloadFileName = 'data',
 
                }) => {
@@ -58,6 +61,9 @@ const Table = ({
                 value={data}
                 paginator
                 rows={10}
+                totalRecords={totalRecords}
+                loading={loading}
+                onPage={onPage}
                 rowsPerPageOptions={[5, 10, 400]}
                 paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
                 currentPageReportTemplate="{first} to {last} of {totalRecords}"
@@ -121,7 +127,7 @@ const Table = ({
                                 filter={col.filter}
                                 sortable={col.sortable}
                                 sortFunction={col.sortFunction}
-                                filterMatchMode={!col.listFieldName  ? 'contains' : 'custom'}
+                                filterMatchMode={!col.listFieldName ? 'contains' : 'custom'}
                                 filterFunction={
                                     col.listFieldName ? (value, filter) => {
                                             const nestedValue = value?.[col.listFieldName]?.toLowerCase() ?? '';
