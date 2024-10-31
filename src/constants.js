@@ -195,3 +195,11 @@ export const COURSE_PARTS = [
 export const TRUE_FALSE_OPTIONS = [
     "Yes", "No"
 ]
+
+export const CURRENCIES = [
+    "AED", "USD", "EGP"
+]
+export const RATINGS = [
+    "Bad", "Good", "V Good", "Exellent"
+
+]

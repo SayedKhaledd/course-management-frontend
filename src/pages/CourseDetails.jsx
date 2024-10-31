@@ -15,7 +15,7 @@ import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import CellTemplate from "../templates/CellTemplate.jsx";
 import {genericSortFunction, simplifyDate} from "../utils.js";
 import {ConfirmDialog} from "primereact/confirmdialog";
-import {TRUE_FALSE_OPTIONS} from "../constants.js";
+import {CURRENCIES, RATINGS, TRUE_FALSE_OPTIONS} from "../constants.js";
 
 const CourseDetails = () => {
     const location = useLocation();
@@ -271,6 +271,19 @@ const CourseDetails = () => {
                 });
                 break;
 
+            case 'currency':
+                setEditingEnrollmentState({
+                    ...editingEnrollmentState,
+                    editedValue: e.target.value
+                });
+                break;
+
+            case 'rating':
+                setEditingEnrollmentState({
+                    ...editingEnrollmentState,
+                    editedValue: e.target.value
+                });
+
         }
 
     };
@@ -334,7 +347,7 @@ const CourseDetails = () => {
             header: 'Currency',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'currency', editingEnrollmentState, cellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'currency', null, editingEnrollmentState, CURRENCIES, dropDownCellHandlers)
         },
         {
             field: 'paymentMethod',
@@ -384,7 +397,7 @@ const CourseDetails = () => {
             header: 'Rating',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'rating', editingEnrollmentState, cellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'rating', null, editingEnrollmentState, RATINGS, dropDownCellHandlers)
         },
         {
             field: 'description',
@@ -648,13 +661,12 @@ const CourseDetails = () => {
     }
     return (
         <>
-            <Card className="p-m-4" title="Client Details">
+            <Card className="p-m-4" title="Course Details">
                 <div className="p-d-flex p-ai-center p-mb-3">
                     <Avatar label="JD" className="p-mr-3" size="large" shape="circle"/>
                     <h2>{course.name}</h2>
                 </div>
                 <div className="p-fluid">
-                    {/* Name Field */}
                     <div className="p-field p-d-flex p-ai-center">
                         <label htmlFor="name" className="p-mr-2">Name</label>
                         <InputText

@@ -16,7 +16,7 @@ import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import CellTemplate from "../templates/CellTemplate.jsx";
 import HistoryDialog from "../components/HistoryDialog.jsx";
 import {ConfirmDialog} from "primereact/confirmdialog";
-import {TRUE_FALSE_OPTIONS} from "../constants.js";
+import {CURRENCIES, RATINGS, TRUE_FALSE_OPTIONS} from "../constants.js";
 
 
 const ClientDetails = () => {
@@ -177,7 +177,6 @@ const ClientDetails = () => {
 
     };
     const onDropDownChange = (e, columnField) => {
-        console.log(e.target.value);
         switch (columnField) {
             case 'course':
                 setEditingEnrollmentState({
@@ -222,10 +221,23 @@ const ClientDetails = () => {
                     ...editingEnrollmentState,
                     editedValue: e.target.value
                 });
+                break;
 
+            case 'currency':
+                setEditingEnrollmentState({
+                    ...editingEnrollmentState,
+                    editedValue: e.target.value
+                });
+                break;
+
+            case 'rating':
+                setEditingEnrollmentState({
+                    ...editingEnrollmentState,
+                    editedValue: e.target.value
+                });
+                break;
 
         }
-        console.log("current state", editingEnrollmentState.editedValue)
 
     };
 
@@ -301,7 +313,7 @@ const ClientDetails = () => {
             header: 'Currency',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'currency', editingEnrollmentState, cellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'currency', null, editingEnrollmentState, CURRENCIES, dropDownCellHandlers)
         },
         {
             field: 'paymentMethod',
@@ -351,7 +363,7 @@ const ClientDetails = () => {
             header: 'Rating',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'rating', editingEnrollmentState, cellHandlers)
+            body: (rowData) => DropDownCellTemplate(rowData, 'rating', null, editingEnrollmentState, RATINGS, dropDownCellHandlers)
         },
         {
             field: 'description',
