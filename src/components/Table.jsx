@@ -14,7 +14,8 @@ const Table = ({
                    paginatorLeftHandlers,
                    setNotification,
                    loading,
-                   totalRecords,
+                   totalNoOfRecords,
+                   noOfRows,
                    onPage,
                    downloadFileName = 'data',
 
@@ -54,19 +55,21 @@ const Table = ({
                     onClick={() => onDeleteRow(rowData)}/>
         );
     };
+
+    console.log("totalNoOfRecords", totalNoOfRecords);
     return (
         <div style={{width: '60rem',}}>
             <DataTable
                 header={header}
                 value={data}
                 paginator
-                rows={10}
-                totalRecords={totalRecords}
+                rows={noOfRows}
+                totalRecords={totalNoOfRecords}
                 loading={loading}
                 onPage={onPage}
                 rowsPerPageOptions={[5, 10, 400]}
                 paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
-                currentPageReportTemplate="{first} to {last} of {totalRecords}"
+                currentPageReportTemplate="{first} to {last} of {totalRecords} records"
                 paginatorLeft={paginatorLeft}
                 paginatorRight={<div/>}
                 showGridlines={true}

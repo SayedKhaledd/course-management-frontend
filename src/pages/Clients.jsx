@@ -32,6 +32,7 @@ function Clients() {
     const [filters, setFilters] = useState({});
     const [totalRecords, setTotalRecords] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [noOfRecordsPerPage, setNoOfRecordsPerPage] = useState(10);
 
 
     const fetchClients = () => {
@@ -39,7 +40,7 @@ function Clients() {
         console.log("apiEndpoints.getPaginatedClients", apiEndpoints.getPaginatedClients);
         axios.post(apiEndpoints.getPaginatedClients, {
             pageNumber: 1,
-            pageSize: 2,
+            pageSize: noOfRecordsPerPage,
             deletedRecords: false,
             sortBy: "name",
             sortDesc: true
@@ -47,7 +48,11 @@ function Clients() {
         })
             .then(response => {
                 setClients(response.data.response.result)
-                setTotalRecords(response.data.response.totalNumberOfElements); // Set total records for pagination
+                console.log("response.data.response.totalNumberOfElements", response.data.response.totalNumberOfElements);
+                if (totalRecords === 0) {
+                    setTotalRecords(response.data.response.totalNumberOfElements);
+                }
+                setNoOfRecordsPerPage(response.data.response.pageSize);
                 setLoading(false);
             })
             .catch(error => {
@@ -307,10 +312,12 @@ function Clients() {
         setConfirmDeleteDialog({visible: false, client: null});
     }
     const onPage = (e) => {
+        const pageNumber = e.page + 1;
+        const pageSize = e.rows;
         setLoading(true);
         axios.post(apiEndpoints.getPaginatedClients, {
-            pageNumber: e.page + 1,
-            pageSize: e.rows,
+            pageNumber: pageNumber,
+            pageSize: pageSize,
             deletedRecords: false,
             sortBy: "name",
             sortDesc: true
@@ -318,9 +325,9 @@ function Clients() {
             .then(response => {
                 setClients(response.data.response.result)
                 setLoading(false);
+                setNoOfRecordsPerPage(response.data.response.pageSize);
             })
             .catch(error => {
-
                     setNotification({message: `Failed to fetch clients: ${error}`, type: 'error'});
                 }
             )
@@ -332,8 +339,9 @@ function Clients() {
                 columns={columns} data={clients} onRowClick={onRowClick} onDeleteRow={onDeleteRow}
                 setNotification={setNotification}
                 paginatorLeftHandlers={{fetchClients, fetchStatusOptions}}
-                totalRecords={totalRecords}
+                totalNoOfRecords={totalRecords}
                 onPage={onPage}
+                noOfRows={noOfRecordsPerPage}
                 loading={loading}
                 downloadFileName="clients"
                 filters={filters}
