@@ -13,9 +13,11 @@ import CourseDetails from "./pages/CourseDetails.jsx";
 import useSecurity from "./hooks/useSecurity.js";
 import Courses from "./pages/Courses.jsx";
 import Users from "./pages/Users.jsx";
+import EnrollmentDetails from "./pages/EnrollmentDetails.jsx";
 
 
 function App() {
+
     return (
         <ReactKeycloakProvider authClient={kc} initOptions={initOptions}>
             <BrowserRouter>
@@ -30,6 +32,7 @@ function App() {
                             <Route path="/sales" element={<SalesRoute/>}/>
                             <Route path="/refunds" element={<RefundsRoute/>}/>
                             <Route path="/client/:id" element={<ClientDetailsRoute/>}/>
+                            <Route path="/client/:clientId/course/:courseId" element={<EnrollmentDetailsRoute/>}/>
                             <Route path="/course/:id" element={<CourseDetailsRoute/>}/>
                             <Route path={"/users"} element={<UsersRoute/>}/>
 
@@ -67,7 +70,8 @@ const SalesRoute = () => {
     return <PrivateRoute children={<Sales/>} roles={[
         security.getRoles().ADMIN,
         security.getRoles().SUPER_ADMIN,
-        security.getRoles().ACCOUNTANT
+        security.getRoles().ACCOUNTANT,
+        security.getRoles().CUSTOMER_SERVICE,
     ]}/>;
 };
 
@@ -86,10 +90,21 @@ const ClientDetailsRoute = () => {
     return <PrivateRoute children={<ClientDetails/>} roles={Object.values(security.getRoles())}/>;
 };
 
+const EnrollmentDetailsRoute = () => {
+    const security = useSecurity();
+    return <PrivateRoute children={<EnrollmentDetails/>} roles={Object.values(security.getRoles())}/>;
+};
+
+
 const CourseDetailsRoute = () => {
     const security = useSecurity();
-    return <PrivateRoute children={<CourseDetails/>} roles={Object.values(security.getRoles())}/>;
-};
+    return <PrivateRoute children={<CourseDetails/>} roles={[
+        security.getRoles().ADMIN,
+        security.getRoles().SUPER_ADMIN,
+        security.getRoles().ACCOUNTANT,
+        security.getRoles().SALES,
+        security.getRoles().CUSTOMER_SERVICE
+    ]}/>;};
 
 const UsersRoute = () => {
     const security = useSecurity();

@@ -7,48 +7,75 @@ import Notification from "../components/Notification.jsx";
 import apiEndpoints from "../apiEndpoints.js";
 import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import CellTemplate from "../templates/CellTemplate.jsx";
-import {Button} from "primereact/button";
-import {Dialog} from "primereact/dialog";
-import {Card} from "primereact/card";
-import {InputText} from "primereact/inputtext";
-import {Dropdown} from "primereact/dropdown";
-import {genericSortFunction} from "../utils.js";
+import {getCriteria, getCustomSorting, simplifyDate} from "../utils.js";
 import {ConfirmDialog} from "primereact/confirmdialog";
+import {FilterMatchMode} from "primereact/api";
+import DynamicListRowFilterTemplate from "../templates/DynamicListRowFilterTemplate.jsx";
+import useSecurity from "../hooks/useSecurity.js";
 
-function Installments() {
-
+function Installments({enrollmentId = null, refresh = false, fetchEnrollment=null}) {
+    console.log(enrollmentId);
     const [installments, setInstallments] = useState([]);
     const [editingState, setEditingState] = useState({id: '', columnField: '', editedValue: null});
-    const [clientOptions, setClientOptions] = useState([]);
-    const [courseOptions, setCourseOptions] = useState([]);
     const [paymentMethodOptions, setPaymentMethodOptions] = useState([]);
     const [paymentStatusOptions, setPaymentStatusOptions] = useState([]);
     const axios = useAxios();
+    const security = useSecurity();
     const [notification, setNotification] = useState({message: '', type: ''});
-    const [displayDialog, setDisplayDialog] = useState(false);
-    const [newInstallment, setNewInstallment] = useState({});
     const [confirmDeleteDialog, setConfirmDeleteDialog] = useState({visible: false, installment: null});
+    const [filters, setFilters] = useState({
+        paymentMethodIds: {value: [], matchMode: FilterMatchMode.IN},
+        paymentStatusIds: {value: [], matchMode: FilterMatchMode.IN},
+        clientName: {value: null, matchMode: 'contains'},
+        courseName: {value: null, matchMode: 'contains'},
+        enrollmentId: {value: enrollmentId, matchMode: 'contains'},
+        amount: {value: null, matchMode: 'contains'},
+        dueDate: {value: null, matchMode: 'contains'},
+        paymentDate: {value: null, matchMode: 'contains'},
+        createdBy: {value: null, matchMode: 'contains'},
+        modifiedBy: {value: null, matchMode: 'contains'},
+        createdDate: {value: null, matchMode: 'contains'},
+        modifiedDate: {value: null, matchMode: 'contains'},
+    });
+    const [pagination, setPagination] = useState({
+        pageNumber: 1,
+        pageSize: 10,
+        totalNumberOfElements: 0,
+    });
+
+    const [sorting, setSorting] = useState({
+        sortBy: "id",
+        sortDesc: false,
+        defaultSortField: "id",
+    });
+    const [loading, setLoading] = useState(true);
 
 
-    const fetchInstallments = () => {
-        axios.get(apiEndpoints.installments).then(response => {
-            setInstallments(response.data.response);
-        }).catch(error =>
-            setNotification({message: 'Failed to fetch installments ' + error, type: 'error'})
-        );
+    const fetchPaginatedInstallments = (paginationDetails = null) => {
+        setLoading(true);
+        const criteria = getCriteria(filters);
+        const customSorting = getCustomSorting(sorting);
+        const customPagination = paginationDetails || pagination;
+        axios.post(apiEndpoints.getPaginatedInstallments, {
+            ...customPagination,
+            ...customSorting,
+            criteria,
+        }).then(response => {
+            const {pageNumber, pageSize, totalNumberOfElements, result} = response.data.response;
+            setPagination(prev => ({
+                ...prev,
+                pageNumber,
+                pageSize,
+                totalNumberOfElements,
+            }));
+            setInstallments(result);
+            setLoading(false);
+        }).catch(error => {
+            setNotification({message: `Failed to fetch installments: ${error}`, type: 'error'});
+            setLoading(false);
+        });
     }
 
-    const fetchClientOptions = () => {
-        axios.get(apiEndpoints.clients).then(response => {
-            setClientOptions(response.data.response);
-        }).catch(error => setNotification({message: 'Failed to fetch client options ' + error, type: 'error'}));
-    }
-    const fetchCourseOptions = () => {
-        axios.get(apiEndpoints.courses).then(response => {
-            setCourseOptions(response.data.response);
-        }).catch(error => setNotification({message: 'Failed to fetch course options ' + error, type: 'error'}));
-
-    }
     const fetchPaymentMethodOptions = () => {
         axios.get(apiEndpoints.paymentMethods).then(response => {
             setPaymentMethodOptions(response.data.response);
@@ -65,12 +92,10 @@ function Installments() {
 
 
     useEffect(() => {
-        fetchInstallments();
-        fetchClientOptions();
-        fetchCourseOptions();
+        fetchPaginatedInstallments();
         fetchPaymentMethodOptions();
         fetchPaymentStatusOptions();
-    }, []);
+    }, [refresh]);
 
 
     const onEdit = (id, columnField, editedValue) => {
@@ -111,7 +136,9 @@ function Installments() {
         }
         const payload = {[columnField]: editingState.editedValue};
         axios.patch(endpoint, payload).then(() => {
-            fetchInstallments();
+            fetchPaginatedInstallments();
+            if(fetchEnrollment)
+                fetchEnrollment();
             onCancelEdit();
             setNotification({message: `Updated ${columnField} successfully`, type: 'success'});
 
@@ -128,27 +155,29 @@ function Installments() {
     }
 
     const columns = [
-        {
-            field: 'enrollment',
-            header: 'Client',
-            listFieldName: 'client',
-            nestedField: 'name',
-            filter: true,
-            sortable: true,
-            sortFunction: (e) => genericSortFunction(e, 'enrollment', 'client', 'name'),
-            body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'client', editingState, clientOptions, dropDownCellHandlers, 'name', false)
+        ...enrollmentId == null ? ([{
+                field: 'enrollment',
+                header: 'Client',
+                listFieldName: 'client',
+                nestedField: 'name',
+                filter: true,
+                sortable: true,
+                filterField: 'clientName',
+                body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'client', editingState, null, dropDownCellHandlers, 'name', false)
 
-        },
-        {
-            field: 'enrollment',
-            header: 'Course',
-            listFieldName: 'course',
-            nestedField: 'name',
-            filter: true,
-            sortable: true,
-            sortFunction: (e) => genericSortFunction(e, 'enrollment', 'course', 'name'),
-            body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'course', editingState, courseOptions, dropDownCellHandlers, 'name', false)
-        },
+            },
+                {
+                    field: 'enrollment',
+                    header: 'Course',
+                    listFieldName: 'course',
+                    nestedField: 'name',
+                    filter: true,
+                    sortable: true,
+                    filterField: 'courseName',
+                    body: (rowData) => DropDownCellTemplate(rowData, 'enrollment', 'course', editingState, null, dropDownCellHandlers, 'name', false)
+                }]
+
+        ) : [],
         {
             field: 'amount',
             header: 'Amount',
@@ -161,14 +190,20 @@ function Installments() {
             header: 'Payment Due Date',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'dueDate', editingState, handlers)
+            body: (rowData) => CellTemplate({
+                ...rowData,
+                dueDate: simplifyDate(rowData.dueDate)
+            }, 'dueDate', editingState, handlers)
         },
         {
             field: 'paymentDate',
             header: 'Payment Date',
             filter: true,
             sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'paymentDate', editingState, handlers)
+            body: (rowData) => CellTemplate({
+                ...rowData,
+                paymentDate: simplifyDate(rowData.paymentDate)
+            }, 'paymentDate', editingState, handlers)
         },
         {
             field: 'paymentMethod',
@@ -176,7 +211,13 @@ function Installments() {
             listFieldName: 'method',
             filter: true,
             sortable: true,
-            sortFunction: (e) => genericSortFunction(e, 'paymentMethod', 'method'),
+            filterElement: DynamicListRowFilterTemplate({
+                value: filters.paymentMethodIds.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    paymentMethodIds: {value, matchMode: FilterMatchMode.IN},
+                })
+            }, paymentMethodOptions, 'method'),
             body: (rowData) => DropDownCellTemplate(rowData, 'paymentMethod', 'method', editingState, paymentMethodOptions, dropDownCellHandlers)
         },
         {
@@ -185,44 +226,38 @@ function Installments() {
             listFieldName: 'status',
             filter: true,
             sortable: true,
-            sortFunction: (e) => genericSortFunction(e, 'paymentStatus', 'status'),
+            filterElement: DynamicListRowFilterTemplate({
+                value: filters.paymentStatusIds.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    paymentStatusIds: {value, matchMode: FilterMatchMode.IN},
+                })
+            }, paymentStatusOptions, 'status'),
             body: (rowData) => DropDownCellTemplate(rowData, 'paymentStatus', 'status', editingState, paymentStatusOptions, dropDownCellHandlers)
         }
 
     ]
-
-    const openDialog = () => {
-        setDisplayDialog(true);
-    }
-
-    const closeDialog = () => {
-        setDisplayDialog(false);
-        setNewInstallment({});
-    }
-    const createInstallment = () => {
-        if (newInstallment.dueDate !== '') {
-            newInstallment.dueDate = new Date(newInstallment.dueDate).toISOString();
-        }
-        axios.post(apiEndpoints.createInstallment, newInstallment).then(response => {
-            setNotification({message: 'Installment created successfully', type: 'success'});
-            fetchInstallments();
-            closeDialog();
-        }).catch(error => setNotification({message: 'Failed to create installment ' + error, type: 'error'}));
-    }
-
     const onDeleteRow = (rowData) => {
-        setConfirmDeleteDialog({visible: true, installment: rowData});
+        if (security.isAuthorizedToDelete())
+            setConfirmDeleteDialog({visible: true, installment: rowData});
+        else
+            setNotification({message: 'You are not authorized to delete installments', type: 'error'});
     }
     const deleteInstallment = () => {
         axios.delete(apiEndpoints.getInstallmentDeleteEndpoint(confirmDeleteDialog.installment.id))
             .then(() => {
-                fetchInstallments();
+                fetchPaginatedInstallments();
                 setNotification({message: 'Installment deleted successfully', type: 'success'});
                 setConfirmDeleteDialog({visible: false, installment: null});
             }).catch(error => setNotification({message: `Failed to delete installment: ${error}`, type: 'error'}));
     }
     const cancelDeleteInstallment = () => {
         setConfirmDeleteDialog({visible: false, installment: null});
+    }
+    const onPage = (e) => {
+        fetchPaginatedInstallments(
+            {pageNumber: e.page + 1, pageSize: e.rows}
+        );
     }
 
     return (
@@ -234,91 +269,27 @@ function Installments() {
                 onDeleteRow={onDeleteRow}
                 downloadFileName={'installments'}
                 setNotification={setNotification}
+                onPage={onPage}
+                paginationParams={pagination}
+                setPaginationParams={setPagination}
+                fetchPaginatedItems={fetchPaginatedInstallments}
+                sorting={sorting}
+                setSorting={setSorting}
+                filters={filters}
+                setFilters={setFilters}
+                loading={loading}
                 paginatorLeftHandlers={{
-                    fetchInstallments,
-                    fetchClientOptions,
-                    fetchCourseOptions,
+                    fetchInstallments: fetchPaginatedInstallments,
                     fetchPaymentMethodOptions,
                     fetchPaymentStatusOptions
                 }}
             ></Table>
-            <Button
-                icon="pi pi-plus"
-                className="p-button-rounded p-button-primary"
-                style={{position: 'fixed', marginTop: '200px', bottom: '16px', right: '16px', zIndex: 1000}}
-                onClick={openDialog}
-                label="New Installment"
-            />
-            <Dialog
-                header="Create New Installment"
-                visible={displayDialog}
-                style={{width: '50vw'}}
-                modal
-                onHide={closeDialog}
-            >
-                <Card title="Installment Details">
-                    <div className="p-fluid">
-                        <div className="p-field">
-                            <label htmlFor="course">Course</label>
-                            <Dropdown id="course"
-                                      options={courseOptions.map(option => option.name)}
-                                      value={newInstallment.enrollment?.courseName}
-                                      onChange={(e) => {
-                                          setNewInstallment({
-                                              ...newInstallment,
-                                              enrollment: {
-                                                  ...newInstallment.enrollment,
-                                                  courseId: courseOptions.find(option => option.name === e.target.value).id,
-                                                  courseName: e.target.value
-                                              }
-                                          })
-
-                                      }
-                                      }/>
-                        </div>
-                        <div className="p-field">
-                            <label htmlFor="client">Client</label>
-                            <Dropdown id="client"
-                                      options={clientOptions.map(option => option.name)}
-                                      value={newInstallment.enrollment?.clientName}
-                                      onChange={(e) => setNewInstallment({
-                                          ...newInstallment,
-                                          enrollment: {
-                                              ...newInstallment.enrollment,
-                                              clientId: clientOptions.find(option => option.name === e.target.value).id,
-                                              clientName: e.target.value
-                                          }
-
-                                      })}/>
-                        </div>
-                        <div className="p-field">
-                            <label htmlFor="amount">amount</label>
-                            <InputText id="amount"
-                                       onInput={(e) => setNewInstallment({...newInstallment, amount: e.target.value})}/>
-                        </div>
-                        <div className="p-field">
-                            <label htmlFor="dueDate">Due Date</label>
-                            <InputText id="dueDate"
-                                       onInput={(e) => setNewInstallment({
-                                           ...newInstallment,
-                                           dueDate: e.target.value
-                                       })}/>
-                        </div>
-
-                        <div className="p-d-flex p-jc-end">
-                            <Button label="Save" icon="pi pi-check" onClick={createInstallment} className="p-mr-2"/>
-                            <Button label="Cancel" icon="pi pi-times" onClick={closeDialog}
-                                    className="p-button-secondary"/>
-                        </div>
-                    </div>
-                </Card>
-            </Dialog>
             <ConfirmDialog
                 visible={confirmDeleteDialog.visible}
                 reject={cancelDeleteInstallment}
                 accept={deleteInstallment}
-                header={`Delete ${confirmDeleteDialog.installment ? confirmDeleteDialog.installment.name : ''}`}
-                message={`Are you sure you want to delete ${confirmDeleteDialog.installment ? confirmDeleteDialog.installment.name : ''}?`}
+                header={`Delete ${confirmDeleteDialog.installment ? confirmDeleteDialog.installment.amount : ''} installment`}
+                message={`Are you sure you want to delete ${confirmDeleteDialog.installment ? confirmDeleteDialog.installment.amount : ''} installment?`}
             >
             </ConfirmDialog>
             <Notification status={notification.type} message={notification.message}/>

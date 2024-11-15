@@ -4,9 +4,10 @@ const PrivateRoute = ({children, roles}) => {
 
     const {keycloak, initialized} = useKeycloak();
 
-    if (!initialized)
+    if (!initialized) {
         return <div>Loading...</div>;
 
+    }
     return keycloak.authenticated  && roles.some(role => keycloak.hasRealmRole(role)) ? children :
         <div>
             <h1>Access Denied</h1>

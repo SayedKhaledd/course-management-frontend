@@ -8,13 +8,15 @@ const DropDownCellTemplate = (rowData, columnField, listFieldName, editingState,
         if (nestedField) return editingState.editedValue[listFieldName][nestedField];
         return listFieldName ? editingState.editedValue[listFieldName] : editingState.editedValue;
     };
+
     const getOptions = () => listOptions.map(e => nestedField ? e[nestedField] : listFieldName ? e[listFieldName] : e);
     const getDisplayValue = () => {
-        if (!rowData[columnField]) return null;
+        if (rowData[columnField]==null) return null;
         if (nestedField) return rowData[columnField][listFieldName][nestedField];
-        return listFieldName ? rowData[columnField][listFieldName] : rowData[columnField];
+        return listFieldName ? rowData[columnField][listFieldName] :
+            rowData[columnField] ===true ? "Yes" : rowData[columnField] ===false ? "No" : rowData[columnField]
+            ;
     };
-
     return (
         <div style={{display: 'flex', alignItems: 'center'}}>
             {isEditing ? (

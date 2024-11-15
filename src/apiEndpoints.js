@@ -9,6 +9,7 @@ const API_ENDPOINTS = {
     updateClientStatus: (clientId, statusId) => `${BASE_URL}/client/${clientId}/status/${statusId}`,
     updateCourseStatus: (courseId, statusId) => `${BASE_URL}/course/${courseId}/status/${statusId}`,
     updateClientReferralSource: (clientId, referralId) => `${BASE_URL}/client/${clientId}/referral-source/${referralId}`,
+    updateClientInitialCourse: (clientId, courseId) => `${BASE_URL}/client/${clientId}/initial-course/${courseId}`,
     updateClientField: (clientId, field) => `${BASE_URL}/client/${clientId}/${field}`,
     updateCourseField: (courseId, field) => `${BASE_URL}/course/${courseId}/${field}`,
     updateEnrollmentField: (enrollmentId, field) => `${BASE_URL}/enrollment/${enrollmentId}/${field}`,
@@ -25,31 +26,34 @@ const API_ENDPOINTS = {
     updateRefundPaymentMethod: (refundId, updateId) => `${BASE_URL}/refund/${refundId}/payment-method/${updateId}`,
     updateRefundMethod: (refundId, updateId) => `${BASE_URL}/refund/${refundId}/refund-method/${updateId}`,
     updateRefundStatus: (refundId, updateId) => `${BASE_URL}/refund/${refundId}/refund-status/${updateId}`,
-    statuses: `${BASE_URL}/client-status/all`,
+    clientStatuses: `${BASE_URL}/client-status/all`,
     referralSources: `${BASE_URL}/referral-source/all`,
     enrollmentsByClientId: (clientId) => `${BASE_URL}/enrollment/client/${clientId}`,
     enrollmentsByCourseId: (courseId) => `${BASE_URL}/enrollment/course/${courseId}`,
     courses: `${BASE_URL}/course/all`,
+    initialCourses: `${BASE_URL}/course/all-initial-courses`,
     getClientUpdateEndpoint: (clientId, column, updateId) => {
         switch (column) {
             case 'clientStatus':
                 return API_ENDPOINTS.updateClientStatus(clientId, updateId);
             case 'referralSource':
                 return API_ENDPOINTS.updateClientReferralSource(clientId, updateId);
+            case 'initialCourse':
+                return API_ENDPOINTS.updateClientInitialCourse(clientId, updateId);
             default:
                 return API_ENDPOINTS.updateClientField(clientId, column.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase());
         }
 
     },
     createEnrollment: `${BASE_URL}/enrollment`,
-    clientHistoryByClientIdAndField: (clientId, fieldName) => `${BASE_URL}/history/entity/${clientId}/entity-type/Client/field-name/${fieldName}`,
-    courseHistoryByCourseIdAndField: (courseId, fieldName) => `${BASE_URL}/history/entity/${courseId}/entity-type/Course/field-name/${fieldName}`,
+    historyByEntityIdAndEntityTypeAndField: (entityId, entityType, fieldName) => `${BASE_URL}/history/entity/${entityId}/entity-type/${entityType}/field-name/${fieldName}`,
     updateEnrollmentCourse: (enrollmentId, courseId) => `${BASE_URL}/enrollment/${enrollmentId}/course/${courseId}`,
     paymentMethods: `${BASE_URL}/payment-method/all`,
     refundMethods: `${BASE_URL}/refund-method/all`,
     paymentStatuses: `${BASE_URL}/payment-status/all`,
     actionTaken: `${BASE_URL}/action-taken/all`,
     createCourse: `${BASE_URL}/course`,
+    createInitialCourse: `${BASE_URL}/course/initial`,
     getCourseUpdateEndpoint: (course, column, updateId) => {
         switch (column) {
             case 'courseStatus':
@@ -116,7 +120,6 @@ const API_ENDPOINTS = {
 
 
     },
-    updateRefundIsConfirmed: (refundId, isConfirmed) => `${BASE_URL}/refund/${refundId}/is-confirmed/${isConfirmed}`,
     sales: `${BASE_URL}/sales/all`,
 
     getClientDeleteEndpoint: (clientId) => `${BASE_URL}/client/${clientId}`,
@@ -133,5 +136,15 @@ const API_ENDPOINTS = {
     refundStatuses: `${BASE_URL}/refund-status/all`,
 
     getUpdateIsReceivedSales: (id, columnField, editedValue, paymentType) => `${BASE_URL}/sales/${id}/payment-type/${paymentType}/${columnField.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}/${editedValue}`,
+    getPaginatedClients:`${BASE_URL}/client/find-paginated-and-filtered`,
+    getPaginatedCourses:`${BASE_URL}/course/find-paginated-and-filtered`,
+    getPaginatedRefunds:`${BASE_URL}/refund/find-paginated-and-filtered`,
+    getPaginatedEnrollments:`${BASE_URL}/enrollment/find-paginated-and-filtered`,
+    getPaginatedInstallments:`${BASE_URL}/installment/find-paginated-and-filtered`,
+    getPaginatedCourseLecturers:`${BASE_URL}/course-lecturer/find-paginated-and-filtered`,
+    getPaginatedUsers:`${BASE_URL}/user/find-paginated-and-filtered`,
+    enrollment: (enrollmentId) => `${BASE_URL}/enrollment/${enrollmentId}`,
+    enrollmentByClientIdAndCourseId: (clientId, courseId) => `${BASE_URL}/enrollment/client/${clientId}/course/${courseId}`,
+
 };
 export default API_ENDPOINTS;

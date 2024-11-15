@@ -1,0 +1,51 @@
+
+on:
+  push:
+    branches:
+      - nobranches
+name: No Push to ovh
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Install Node.js and dependencies
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20.17'  # Specify your Node.js version here
+      - run: npm install
+
+      - name: Build frontend
+        run: npm run build  # Assumes your frontend has a build script in package.json
+
+      - name: Authenticate with OVH Container Registry
+        run: echo "${{ secrets.OVH_PASSWORD }}" | docker login ${{ secrets.OVH_REGISTERY_URL }} -u ${{ secrets.OVH_USERNAME }} -p ${{ secrets.OVH_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.OVH_REGISTERY_URL }}/connect-academy/frontend:sha-${{ github.sha }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to OVH Instance
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          host: ${{ secrets.OVH_HOST_IP }}
+          username: ubuntu
+          key: ${{ secrets.OVH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            sudo docker login ${{ secrets.OVH_REGISTERY_URL }} -u ${{ secrets.OVH_USERNAME }} -p ${{ secrets.OVH_PASSWORD }}
+            sudo docker pull ${{ secrets.OVH_REGISTERY_URL }}/connect-academy/frontend:sha-${{ github.sha }}
+            sudo docker stop frontend || true
+            sudo docker rm frontend || true
+            sudo docker run -d --restart always --network my_network -p 5173:80 -e VITE_BASE_URL=${{ secrets.OVH_BE_URL }} -e  VITE_KEYCLOAK_URL=${{ secrets.OVH_KEYCLOAK_URL }}  --name frontend ${{ secrets.OVH_REGISTERY_URL }}/connect-academy/frontend:sha-${{ github.sha }}

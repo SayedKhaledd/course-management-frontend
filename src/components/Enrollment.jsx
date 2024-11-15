@@ -1,4 +1,4 @@
-import {genericSortFunction, simplifyDate} from "../utils.js";
+import {getCriteria, getCustomSorting, simplifyDate} from "../utils.js";
 import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import CellTemplate from "../templates/CellTemplate.jsx";
 import {CURRENCIES, RATINGS, TRUE_FALSE_OPTIONS} from "../constants.js";
@@ -6,22 +6,25 @@ import apiEndpoints from "../apiEndpoints.js";
 import useAxios from "../hooks/useAxios.js";
 import React, {useEffect, useState} from "react";
 import {ConfirmDialog} from "primereact/confirmdialog";
-import Notification from "./Notification.jsx";
 import Table from "./Table.jsx";
-import {useLocation} from "react-router-dom";
 import {Button} from "primereact/button";
 import {Dialog} from "primereact/dialog";
 import {Card} from "primereact/card";
 import {Dropdown} from "primereact/dropdown";
+import {FilterMatchMode} from "primereact/api";
+import staticListRowFilterTemplate from "../templates/StaticListRowFilterTemplate.jsx";
+import DynamicListRowFilterTemplate from "../templates/DynamicListRowFilterTemplate.jsx";
+import {InputText} from "primereact/inputtext";
+import {useNavigate} from "react-router-dom";
+import useSecurity from "../hooks/useSecurity.js";
 
-
-const Enrollment = ({clientId, courseId}) => {
-    const location = useLocation();
-    const [client, setClient] = useState(location.state?.client || null);
-    const [course, setCourse] = useState(location.state?.course || null);
+const Enrollment = ({
+                        client, fetchClient, course, fetchCourse, setNotification,
+                        referralSourceOptions
+                    }) => {
     const axios = useAxios();
-
-    const [notification, setNotification] = useState({message: '', type: ''});
+    const navigate = useNavigate();
+    const security = useSecurity();
     const [enrollments, setEnrollments] = useState([]);
     const [editingEnrollmentState, setEditingEnrollmentState] = useState({
         id: '',
@@ -29,56 +32,73 @@ const Enrollment = ({clientId, courseId}) => {
         editedValue: null
     });
     const [coursesOptions, setCoursesOptions] = useState([]);
-    const [clientOptions, setClientOptions] = useState([]);
     const [paymentMethodOptions, setPaymentMethodOptions] = useState([]);
     const [paymentStatusOptions, setPaymentStatusOptions] = useState([]);
     const [actionOptions, setActionOptions] = useState([]);
-    const [referralSourceOptions, setReferralSourceOptions] = useState([]);
     const [confirmDeleteDialog, setConfirmDeleteDialog] = useState({visible: false, enrollment: null});
     const [dialogState, setDialogState] = useState({visible: false, newEnrollment: {}});
+    const [filters, setFilters] = useState({
+        clientId: {value: client ? client.id : null, matchMode: 'contains'},
+        courseId: {value: course ? course.id : null, matchMode: 'contains'},
+        paymentMethodIds: {value: [], matchMode: FilterMatchMode.IN},
+        paymentStatusIds: {value: [], matchMode: FilterMatchMode.IN},
+        referralSourceIds: {value: [], matchMode: FilterMatchMode.IN},
+        actionTakenIds: {value: [], matchMode: FilterMatchMode.IN},
+        currencies: {value: [], matchMode: FilterMatchMode.IN},
+        ratings: {value: [], matchMode: FilterMatchMode.IN},
+        insideEgypt: {value: [], matchMode: FilterMatchMode.IN},
+        payInInstallments: {value: [], matchMode: FilterMatchMode.IN},
+        review: {value: null, matchMode: 'contains'},
+        discount: {value: null, matchMode: 'contains'},
+        description: {value: null, matchMode: 'contains'},
+        clientName: {value: null, matchMode: 'contains'},
+        courseName: {value: null, matchMode: 'contains'},
+        amountPaid: {value: null, matchMode: 'contains'},
+        remainingAmount: {value: null, matchMode: 'contains'},
+        totalAmount: {value: null, matchMode: 'contains'},
+        createdBy: {value: null, matchMode: 'contains'},
+        modifiedBy: {value: null, matchMode: 'contains'},
+        createdDate: {value: null, matchMode: 'contains'},
+        modifiedDate: {value: null, matchMode: 'contains'},
+    });
+
+    const [pagination, setPagination] = useState({
+        pageNumber: 1,
+        pageSize: 10,
+        totalNumberOfElements: 0,
+    });
+
+    const [sorting, setSorting] = useState({
+        sortBy: "id",
+        sortDesc: false,
+        defaultSortField: "id",
+    });
+    const [loading, setLoading] = useState(true);
 
 
-    const fetchClient = () => {
-        axios.get(apiEndpoints.client(clientId))
-            .then(response => setClient(response.data.response))
-            .catch(error => console.error(error));
-    }
-
-    const fetchCourse = () => {
-        axios.get(apiEndpoints.course(courseId))
-            .then(response => setCourse(response.data.response))
-            .catch(error => console.error(error));
-    }
-
-    const fetchEnrollments = () => {
-        if (!courseId) {
-            console.log("client.id", clientId);
-            axios.get(apiEndpoints.enrollmentsByClientId(clientId))
-                .then(response => {
-                    setEnrollments(response.data.response.map(enrollment => ({
-                        ...enrollment,
-                        insideEgypt: enrollment.insideEgypt ? "Yes" : "No",
-                        payInInstallments: enrollment.payInInstallments ? "Yes" : "No"
-                    })));
-                })
-                .catch(error => {
-                    setNotification({message: 'Failed to fetch enrollments' + error, type: 'error'});
-                });
-        } else {
-            console.log("course.id", courseId);
-            axios.get(apiEndpoints.enrollmentsByCourseId(courseId))
-                .then(response => {
-                    setEnrollments(response.data.response.map(enrollment => ({
-                        ...enrollment,
-                        insideEgypt: enrollment.insideEgypt ? "Yes" : "No",
-                        payInInstallments: enrollment.payInInstallments ? "Yes" : "No"
-                    })));
-                })
-                .catch(error => {
-                    setNotification({message: 'Failed to fetch enrollments' + error, type: 'error'});
-                });
-
-        }
+    const fetchPaginatedEnrollments = (paginationDetails = null) => {
+        setLoading(true);
+        const criteria = getCriteria(filters);
+        const customSorting = getCustomSorting(sorting);
+        const customPagination = paginationDetails || pagination;
+        axios.post(apiEndpoints.getPaginatedEnrollments, {
+            ...customPagination,
+            ...customSorting,
+            criteria,
+        }).then(response => {
+            const {pageNumber, pageSize, totalNumberOfElements, result} = response.data.response;
+            setPagination(prev => ({
+                ...prev,
+                pageNumber,
+                pageSize,
+                totalNumberOfElements,
+            }));
+            setEnrollments(result);
+            setLoading(false);
+        }).catch(error => {
+            setNotification({message: `Failed to fetch enrollments: ${error}`, type: 'error'});
+            setLoading(false);
+        });
 
 
     };
@@ -91,14 +111,6 @@ const Enrollment = ({clientId, courseId}) => {
         });
     };
 
-    const fetchClientOptions = () => {
-        axios.get(apiEndpoints.clients)
-            .then(response => {
-                setClientOptions(response.data.response.map(client => ({name: client.name, id: client.id})));
-            }).catch(error => {
-            setNotification({message: 'Failed to fetch course options' + error, type: 'error'});
-        });
-    };
 
     const fetchPaymentMethodOptions = () => {
         axios.get(apiEndpoints.paymentMethods)
@@ -124,39 +136,24 @@ const Enrollment = ({clientId, courseId}) => {
             setNotification({message: 'Failed to fetch action options' + error, type: 'error'});
         });
     }
-    const fetchReferralSourceOptions = () => {
-        axios.get(apiEndpoints.referralSources)
-            .then(response => {
-                setReferralSourceOptions(response.data.response.map(source => ({
-                    source: source.source,
-                    id: source.id
-                })));
-            }).catch(error => {
-            setNotification({message: 'Failed to fetch referral source options' + error, type: 'error'});
-        });
-    }
+
 
     useEffect(() => {
-        if (!courseId) {
-            console.log("fetching client");
+        if (!course && !fetchCourse) {
             if (!client) {
                 fetchClient();
             }
             fetchCourseOptions();
 
-        } else if (!clientId) {
-            console.log("fetching course");
+        } else if (!client && !fetchClient) {
             if (!course) {
                 fetchCourse();
             }
-            fetchClientOptions();
-
         }
-        fetchEnrollments();
+        fetchPaginatedEnrollments();
         fetchPaymentMethodOptions();
         fetchPaymentStatusOptions();
         fetchActionOptions();
-        fetchReferralSourceOptions();
     }, []);
 
 
@@ -180,7 +177,7 @@ const Enrollment = ({clientId, courseId}) => {
         }
         const payload = {[columnField]: editingEnrollmentState.editedValue};
         axios.patch(endpoint, payload).then(() => {
-            fetchEnrollments();
+            fetchPaginatedEnrollments();
             onCancelEdit();
             setNotification({message: `Updated ${columnField} successfully`, type: 'success'});
 
@@ -191,19 +188,6 @@ const Enrollment = ({clientId, courseId}) => {
     };
     const onDropDownChange = (e, columnField) => {
         switch (columnField) {
-            case 'course':
-                setEditingEnrollmentState({
-                    ...editingEnrollmentState,
-                    editedValue: coursesOptions.find(option => option.status === e.target.value)
-                });
-                break;
-            case 'client':
-                setEditingEnrollmentState({
-                    ...editingEnrollmentState,
-                    editedValue: clientOptions.find(option => option.status === e.target.value)
-                });
-                break;
-
             case 'referralSource':
                 setEditingEnrollmentState({
                     ...editingEnrollmentState,
@@ -262,12 +246,15 @@ const Enrollment = ({clientId, courseId}) => {
     };
 
     const onDeleteRow = (rowData) => {
-        setConfirmDeleteDialog({visible: true, enrollment: rowData});
+        if (security.isAuthorizedToDelete())
+            setConfirmDeleteDialog({visible: true, enrollment: rowData});
+        else
+            setNotification({message: 'You are not authorized to delete this enrollment', type: 'error'});
     }
     const deleteEnrollment = () => {
         axios.delete(apiEndpoints.getEnrollmentDeleteEndpoint(confirmDeleteDialog.enrollment.id))
             .then(() => {
-                fetchEnrollments();
+                fetchPaginatedEnrollments();
                 setNotification({message: 'Client deleted successfully', type: 'success'});
                 setConfirmDeleteDialog({visible: false, enrollment: null});
             }).catch(error => setNotification({message: `Failed to delete client: ${error}`, type: 'error'}));
@@ -282,25 +269,24 @@ const Enrollment = ({clientId, courseId}) => {
         onEdit, onSubmitEdit, onCancelEdit, onOptionChange: onDropDownChange
     }
     const columns = [
-        //add here optional column depending on the value of courseId
-        ...(clientId ? [{
+        ...(client ? [{
             field: 'course',
             header: 'Course',
             filter: true,
             listFieldName: 'name',
             sortable: true,
-            sortFunction: (e) => genericSortFunction(e, 'course', 'name'),
-            body: (rowData) => DropDownCellTemplate(rowData, 'course', 'name', editingEnrollmentState, coursesOptions, dropDownCellHandlers)
+            filterField: 'courseName',
+            body: (rowData) => DropDownCellTemplate(rowData, 'course', 'name', editingEnrollmentState, coursesOptions, dropDownCellHandlers, null, false)
         }] : []),
 
-        ...(courseId ? [{
+        ...(course ? [{
             field: 'client',
             header: 'Client',
             filter: true,
             listFieldName: 'name',
             sortable: true,
-            sortFunction: (e) => genericSortFunction(e, 'client', 'name'),
-            body: (rowData) => DropDownCellTemplate(rowData, 'client', 'name', editingEnrollmentState, clientOptions, dropDownCellHandlers)
+            filterField: 'clientName',
+            body: (rowData) => DropDownCellTemplate(rowData, 'client', 'name', editingEnrollmentState, null, dropDownCellHandlers, null, false)
         }] : []),
 
         {
@@ -329,6 +315,13 @@ const Enrollment = ({clientId, courseId}) => {
             header: 'Pay in Installments',
             filter: true,
             sortable: true,
+            filterElement: staticListRowFilterTemplate({
+                value: filters.payInInstallments.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    payInInstallments: {value, matchMode: FilterMatchMode.IN},
+                }),
+            }, TRUE_FALSE_OPTIONS, true),
             body: (rowData) => DropDownCellTemplate(rowData, 'payInInstallments', null, editingEnrollmentState, TRUE_FALSE_OPTIONS, dropDownCellHandlers)
         },
         {
@@ -343,6 +336,13 @@ const Enrollment = ({clientId, courseId}) => {
             header: 'Currency',
             filter: true,
             sortable: true,
+            filterElement: staticListRowFilterTemplate({
+                value: filters.currencies.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    currencies: {value, matchMode: FilterMatchMode.IN},
+                }),
+            }, CURRENCIES),
             body: (rowData) => DropDownCellTemplate(rowData, 'currency', null, editingEnrollmentState, CURRENCIES, dropDownCellHandlers)
         },
         {
@@ -351,7 +351,13 @@ const Enrollment = ({clientId, courseId}) => {
             listFieldName: 'method',
             filter: true,
             sortable: true,
-            sortFunction: (e) => genericSortFunction(e, 'paymentMethod', 'method'),
+            filterElement: DynamicListRowFilterTemplate({
+                value: filters.paymentMethodIds.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    paymentMethodIds: {value, matchMode: FilterMatchMode.IN},
+                })
+            }, paymentMethodOptions, 'method'),
             body: (rowData) => DropDownCellTemplate(rowData, 'paymentMethod', 'method', editingEnrollmentState, paymentMethodOptions, dropDownCellHandlers)
         },
         {
@@ -360,7 +366,13 @@ const Enrollment = ({clientId, courseId}) => {
             listFieldName: 'status',
             filter: true,
             sortable: true,
-            sortFunction: (e) => genericSortFunction(e, 'paymentStatus', 'status'),
+            filterElement: DynamicListRowFilterTemplate({
+                value: filters.paymentStatusIds.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    paymentStatusIds: {value, matchMode: FilterMatchMode.IN},
+                })
+            }, paymentStatusOptions, 'status'),
             body: (rowData) => DropDownCellTemplate(rowData, 'paymentStatus', 'status', editingEnrollmentState, paymentStatusOptions, dropDownCellHandlers)
         },
         {
@@ -369,7 +381,13 @@ const Enrollment = ({clientId, courseId}) => {
             listFieldName: 'action',
             filter: true,
             sortable: true,
-            sortFunction: (e) => genericSortFunction(e, 'actionTaken', 'action'),
+            filterElement: DynamicListRowFilterTemplate({
+                value: filters.actionTakenIds.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    actionTakenIds: {value, matchMode: FilterMatchMode.IN},
+                })
+            }, actionOptions, 'action'),
             body: (rowData) => DropDownCellTemplate(rowData, 'actionTaken', 'action', editingEnrollmentState, actionOptions, dropDownCellHandlers)
         },
         {
@@ -378,7 +396,13 @@ const Enrollment = ({clientId, courseId}) => {
             listFieldName: 'source',
             filter: true,
             sortable: true,
-            sortFunction: (e) => genericSortFunction(e, 'referralSource', 'source'),
+            filterElement: DynamicListRowFilterTemplate({
+                value: filters.referralSourceIds.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    referralSourceIds: {value, matchMode: FilterMatchMode.IN},
+                })
+            }, referralSourceOptions, 'source'),
             body: (rowData) => DropDownCellTemplate(rowData, 'referralSource', 'source', editingEnrollmentState, referralSourceOptions, dropDownCellHandlers)
         },
         {
@@ -393,6 +417,13 @@ const Enrollment = ({clientId, courseId}) => {
             header: 'Rating',
             filter: true,
             sortable: true,
+            filterElement: staticListRowFilterTemplate({
+                value: filters.ratings.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    ratings: {value, matchMode: FilterMatchMode.IN},
+                })
+            }, RATINGS),
             body: (rowData) => DropDownCellTemplate(rowData, 'rating', null, editingEnrollmentState, RATINGS, dropDownCellHandlers)
         },
         {
@@ -407,6 +438,13 @@ const Enrollment = ({clientId, courseId}) => {
             header: 'Is inside Egypt?',
             filter: true,
             sortable: true,
+            filterElement: staticListRowFilterTemplate({
+                value: filters.insideEgypt.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    insideEgypt: {value, matchMode: FilterMatchMode.IN},
+                })
+            }, TRUE_FALSE_OPTIONS, true),
             body: (rowData) => DropDownCellTemplate(rowData, 'insideEgypt', null, editingEnrollmentState, TRUE_FALSE_OPTIONS, dropDownCellHandlers)
         },
 
@@ -446,23 +484,23 @@ const Enrollment = ({clientId, courseId}) => {
         }
     ];
 
-    const onCourseChange = (e) => {
+    const onCourseChange = (e, field, listFieldName, listOptions) => {
         setDialogState({
             ...dialogState,
             newEnrollment: {
                 ...dialogState.newEnrollment,
-                courseId: coursesOptions.find(course => course.name === e.target.value).id,
-                courseName: e.target.value
+                [field+'Id']: listOptions.find(course => course[listFieldName] === e.target.value).id,
+                [field]: listOptions.find(course => course[listFieldName] === e.target.value)
             }
         });
     }
 
-    const onClientChange = (e) => {
+    const onFieldChange = (e, field) => {
         setDialogState({
             ...dialogState,
             newEnrollment: {
-                ...dialogState.newEnrollment, clientName: e.target.value,
-                clientId: clientOptions.find(option => option.name === e.target.value).id
+                ...dialogState.newEnrollment,
+                [field]: e.target.value
             }
         });
     }
@@ -478,36 +516,60 @@ const Enrollment = ({clientId, courseId}) => {
 
     const createEnrollment = () => {
         axios.post(apiEndpoints.createEnrollment, {
-            clientId: Number(id),
-            courseId: dialogState.newEnrollment.courseId,
+            ...dialogState.newEnrollment,
+            clientId: Number(client ? client.id : dialogState.newEnrollment.clientId),
+            courseId: Number(client ? dialogState.newEnrollment.courseId : course.id),
+
         }).then(response => {
             setNotification({message: 'Enrollment created successfully', type: 'success'});
-            // fetchEnrollments();
+            fetchPaginatedEnrollments();
             closeDialog();
         }).catch(error => {
             setNotification({message: 'Failed to create enrollment' + error, type: 'error'});
         });
     };
 
+    const onPage = (e) => {
+        fetchPaginatedEnrollments(
+            {pageNumber: e.page + 1, pageSize: e.rows}
+        );
+    }
+
+    if (!client && !course) return null;
+    const onRowClick = (enrollment) => {
+        navigate(`/client/${enrollment.client.id}/course/${enrollment.course.id}`);
+    };
 
     return (
         <>
             <Table
                 header={'Enrollments'}
-                data={enrollments} columns={columns} paginatorLeftHandlers={fetchEnrollments}
+                onRowClick={onRowClick}
+                data={enrollments} columns={columns} paginatorLeftHandlers={fetchPaginatedEnrollments}
                 downloadFileName={'enrollments'}
                 setNotification={setNotification}
+                onPage={onPage}
+                paginationParams={pagination}
+                setPaginationParams={setPagination}
+                fetchPaginatedItems={fetchPaginatedEnrollments}
+                sorting={sorting}
+                setSorting={setSorting}
+                filters={filters}
+                setFilters={setFilters}
+                loading={loading}
                 onDeleteRow={onDeleteRow}
 
             ></Table>
+            {client ?
+                <Button
+                    icon="pi pi-plus"
+                    className="p-button-rounded p-button-primary"
+                    style={{position: 'fixed', marginTop: '20px', bottom: '16px', right: '16px', zIndex: 1000}}
+                    onClick={openDialog}
+                    label="New Enrollment"
+                /> : null
+            }
 
-            <Button
-                icon="pi pi-plus"
-                className="p-button-rounded p-button-primary"
-                style={{position: 'static', marginTop: '20px', bottom: '16px', marginLeft: '800px', zIndex: 1000}}
-                onClick={openDialog}
-                label="New Enrollment"
-            />
             <Dialog
                 header="Create New Enrollment"
                 visible={dialogState.visible}
@@ -518,27 +580,62 @@ const Enrollment = ({clientId, courseId}) => {
                 <Card title="Enrollment Details">
                     <div className="p-fluid">
                         <div className="p-fluid">
-                            {clientId ? (
-                                <div className="p-field">
-                                    <label htmlFor="course">Name</label>
-                                    <Dropdown id="course"
-                                              value={dialogState.newEnrollment?.courseName}
-                                              options={coursesOptions.map(course => course.name)}
-                                              placeholder="Select a course"
-                                              onChange={onCourseChange}
-                                    />
-                                </div>
-                            ) : (
-                                <div className="p-field">
-                                    <label htmlFor="client">Client Name</label>
-                                    <Dropdown id="client"
-                                              value={dialogState.newEnrollment?.clientName}
-                                              options={clientOptions.map(client => client.name)}
-                                              placeholder="Select a client"
-                                              onChange={onClientChange}
-                                    />
-                                </div>
-                            )}
+                            <div className="p-field">
+                                <label htmlFor="course">Course Name</label>
+                                <Dropdown id="course"
+                                          value={dialogState.newEnrollment?.course?.name}
+                                          options={coursesOptions.map(course => course.name)}
+                                          placeholder="Select a course"
+                                          onChange={(e) => {
+                                              onCourseChange(e, 'course', 'name', coursesOptions);
+                                          }}
+                                />
+                            </div>
+
+                            <div className="p-field">
+                                <label htmlFor="curreny">currency</label>
+                                <Dropdown id="currency"
+                                          value={dialogState.newEnrollment?.currency}
+                                          options={CURRENCIES}
+                                          placeholder="Select a currency"
+                                          onChange={(e) => {
+                                              onFieldChange(e, 'currency');
+                                          }}
+                                />
+                            </div>
+
+                            <div className="p-field">
+                                <label htmlFor="paymentMethod">Payment method</label>
+                                <Dropdown id="paymentMethod"
+                                          value={dialogState.newEnrollment?.paymentMethod?.method}
+                                          options={paymentMethodOptions.map(paymentMethod => paymentMethod.method)}
+                                          placeholder="Select a Payment Method"
+                                          onChange={(e) => {
+                                              onCourseChange(e, 'paymentMethod', 'method', paymentMethodOptions);
+                                          }}
+                                />
+                            </div>
+
+                            <div className="p-field">
+                                <label htmlFor="totalAmount">total amount</label>
+                                <InputText id="totalAmount"
+                                           value={dialogState.newEnrollment?.totalAmount}
+                                           onChange={(e) => {
+                                               onFieldChange(e, 'totalAmount');
+                                           }}
+                                />
+                            </div>
+                            <div className="p-field">
+                                <label htmlFor="amountPaid">Amount Paid</label>
+                                <InputText id="amountPaid"
+                                           value={dialogState.newEnrollment?.amountPaid}
+                                           onChange={(e) => {
+                                               onFieldChange(e, 'amountPaid');
+                                           }}
+                                />
+                            </div>
+
+
                         </div>
 
                         <div className="p-d-flex p-jc-end">
@@ -560,7 +657,6 @@ const Enrollment = ({clientId, courseId}) => {
             >
             </ConfirmDialog>
 
-            <Notification status={notification.type} message={notification.message}/>
         </>
 
     );

@@ -3,12 +3,17 @@ import useAxios from "../hooks/useAxios.js";
 // import 'primereact/resources/themes/lara-light-indigo/theme.css'; // You can change the theme here
 // import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
-import Table from "../components/Table.jsx";
 import Notification from "../components/Notification.jsx";
 import apiEndpoints from "../apiEndpoints.js";
 import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import {TRUE_FALSE_OPTIONS} from "../constants.js";
-import {simplifyDate} from "../utils.js"; // For using icons
+import {downloadCSV, simplifyDate} from "../utils.js";
+import {DataTable} from "primereact/datatable";
+import {Column} from "primereact/column";
+import {Button} from "primereact/button";
+import {PDFDownloadLink} from "@react-pdf/renderer";
+import Report from "../components/pdf/Report.jsx";
+import useSecurity from "../hooks/useSecurity.js"; // For using icons
 
 function Sales() {
     const [notification, setNotification] = useState({message: '', type: ''});
@@ -16,6 +21,7 @@ function Sales() {
 
     const [sales, setSales] = useState([]);
     const axios = useAxios();
+    const security = useSecurity();
 
     const fetchSales = () => {
         axios.get(apiEndpoints.sales)
@@ -156,18 +162,69 @@ function Sales() {
         },
     ]
 
+    const paginatorLeft = (
+        <Button type="button" icon="pi pi-refresh" text onClick={() => {
+            fetchSales();
 
+            setNotification({message: 'Data refreshed successfully', type: 'success'});
+        }}/>
+    );
+    const headers = (
+        <div className="flex align-items-center justify-content-end gap-2">
+            {security.isAuthorizedToDownloadData() ? (
+                <>
+                    <Button type="button" icon="pi pi-file-excel" severity="success" rounded
+                            onClick={() => downloadCSV(sales, columns, 'sales')}
+                            data-pr-tooltip="XLS"/>
+
+                    <PDFDownloadLink document={<Report data={sales} columns={columns}/>}
+                                     fileName={'sales.pdf'}>
+                        <Button type="button" icon="pi pi-file-pdf" severity="warning" rounded
+                                data-pr-tooltip="PDF"/>
+                    </PDFDownloadLink>
+                </>) : null}
+        </div>
+    );
     return (
         <>
-            <Table
+            <DataTable
                 header={<h2>Sales</h2>}
-                data={sales}
-                columns={columns}
-                paginatorLeftHandlers={[fetchSales]}
-                downloadFileName={'sales'}
-                setNotification={setNotification}
+                value={sales}
+                paginator
+                totalRecords={sales.length}
+                rows={sales.length}
+                rowsPerPageOptions={[5, 10, 400]}
+                paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
+                currentPageReportTemplate="{first} to {last} of {totalRecords} records"
+                paginatorLeft={paginatorLeft}
+                paginatorRight={<div/>}
+                showGridlines={true}
+                stripedRows
+                style={{border: '1px solid #d9d9d9', borderRadius: '8px'}}
+                className="p-datatable-table"
+                scrollable={true}
+                removableSort
+                onRowClick={(e) => onRowClick(e.data)}
+                footer={headers}
+            >
 
-            ></Table>
+                {columns.map((col, index) => {
+                    return <Column
+                        key={index}
+                        field={col.field}
+                        header={col.header}
+                        filter={col.filter}
+                        sortable={col.sortable}
+                        showFilterMenu={true}
+                        body={col.body}
+                        style={{minWidth: '12rem'}}
+
+                    />;
+
+
+                })}
+
+            </DataTable>
 
             <Notification status={notification.type} message={notification.message}/>
         </>

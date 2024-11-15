@@ -1,0 +1,67 @@
+name: Deploy Frontend to aws
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Install Node.js and dependencies
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20.17'
+      - run: npm install
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver: docker-container
+      - name: Authenticate with AWS ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_REGISTRY_URL }}
+
+
+      - name: Build and Push to ecr
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ secrets.AWS_REGISTRY_URL }}/connect-academy/course-management-frontend:sha-${{ github.sha }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to AWS EC2 Instance
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.AWS_EC2_PRIVATE_KEY }}
+          port: 22
+          script: |
+            aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin ${{ secrets.AWS_REGISTRY_URL }}
+            sudo docker pull ${{ secrets.AWS_REGISTRY_URL }}/connect-academy/course-management-frontend:sha-${{ github.sha }}
+            sudo docker stop course-management-frontend || true
+            sudo docker rm course-management-frontend || true
+            sudo docker run -d --restart always  -p 5173:80 -e VITE_BASE_URL=${{ secrets.AWS_BE_URL }} -e  VITE_KEYCLOAK_URL=${{ secrets.AWS_KEYCLOAK_URL }}  --name course-management-frontend ${{ secrets.AWS_REGISTRY_URL }}/connect-academy/course-management-frontend:sha-${{ github.sha }}

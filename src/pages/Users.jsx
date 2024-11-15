@@ -5,7 +5,7 @@ import Table from "../components/Table.jsx";
 import Notification from "../components/Notification.jsx";
 import apiEndpoints from "../apiEndpoints.js";
 import CellTemplate from "../templates/CellTemplate.jsx";
-import {genericSortFunction} from "../utils.js";
+import {getCriteria, getCustomSorting} from "../utils.js";
 import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import {ConfirmDialog} from "primereact/confirmdialog";
 import {Button} from "primereact/button";
@@ -13,6 +13,8 @@ import {Dialog} from "primereact/dialog";
 import {Card} from "primereact/card";
 import {Dropdown} from "primereact/dropdown";
 import {InputText} from "primereact/inputtext";
+import {FilterMatchMode} from "primereact/api";
+import staticListRowFilterTemplate from "../templates/StaticListRowFilterTemplate.jsx";
 
 function Users() {
     const [notification, setNotification] = useState({message: '', type: ''});
@@ -24,13 +26,54 @@ function Users() {
     const [displayDialog, setDisplayDialog] = useState(false);
     const [newUser, setNewUser] = useState({});
 
-    const fetchUsers = () => {
-        axios.get(apiEndpoints.users)
-            .then(response => {
-                setUsers(response.data.response);
-            }).catch(error =>
-            setNotification({message: 'Failed to fetch users ' + error, type: 'error'})
-        );
+    const [filters, setFilters] = useState({
+        firstMame: {value: null, matchMode: 'contains'},
+        lastMame: {value: null, matchMode: 'contains'},
+        email: {value: null, matchMode: 'contains'},
+        phoneNumber: {value: null, matchMode: 'contains'},
+        roles: {value: [], matchMode: FilterMatchMode.IN},
+        createdBy: {value: null, matchMode: 'contains'},
+        modifiedBy: {value: null, matchMode: 'contains'},
+        createdDate: {value: null, matchMode: 'contains'},
+        modifiedDate: {value: null, matchMode: 'contains'},
+    });
+
+    const [pagination, setPagination] = useState({
+        pageNumber: 1,
+        pageSize: 10,
+        totalNumberOfElements: 0,
+    });
+
+    const [sorting, setSorting] = useState({
+        sortBy: "firstName",
+        sortDesc: false,
+        defaultSortField: "firstName",
+    });
+    const [loading, setLoading] = useState(true);
+
+    const fetchPaginatedUsers = (paginationDetails = null) => {
+        setLoading(true);
+        const criteria = getCriteria(filters);
+        const customSorting = getCustomSorting(sorting);
+        const customPagination = paginationDetails || pagination;
+        axios.post(apiEndpoints.getPaginatedUsers, {
+            ...customPagination,
+            ...customSorting,
+            criteria,
+        }).then(response => {
+            const {pageNumber, pageSize, totalNumberOfElements, result} = response.data.response;
+            setPagination(prev => ({
+                ...prev,
+                pageNumber,
+                pageSize,
+                totalNumberOfElements,
+            }));
+            setUsers(result);
+            setLoading(false);
+        }).catch(error => {
+            setNotification({message: `Failed to fetch users: ${error}`, type: 'error'});
+            setLoading(false);
+        });
     }
 
     const fetchRoles = () => {
@@ -44,7 +87,7 @@ function Users() {
     }
 
     useEffect(() => {
-        fetchUsers();
+        fetchPaginatedUsers();
         fetchRoles();
 
     }, []);
@@ -70,7 +113,7 @@ function Users() {
         const endpoint = apiEndpoints.getUserUpdate(id, columnField);
         const payload = {[columnField]: editingState.editedValue};
         axios.patch(endpoint, payload).then(() => {
-            fetchUsers();
+            fetchPaginatedUsers();
             onCancelEdit();
             setNotification({message: `Updated ${columnField} successfully`, type: 'success'});
 
@@ -123,7 +166,13 @@ function Users() {
             header: 'Role',
             sortable: true,
             filter: true,
-            sortFunction: (e) => genericSortFunction(e, 'role', 'role'),
+            filterElement: staticListRowFilterTemplate({
+                value: filters.roles.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    roles: {value, matchMode: FilterMatchMode.IN},
+                }),
+            }, roleOptions),
             body: (rowData) => DropDownCellTemplate(rowData, 'role', null, editingState, roleOptions, dropDownCellHandlers,)
         }
 
@@ -135,7 +184,7 @@ function Users() {
     const deleteUser = () => {
         axios.delete(apiEndpoints.getDeleteUser(confirmDeleteDialog.user.id))
             .then(() => {
-                fetchUsers();
+                fetchPaginatedUsers();
                 setNotification({message: 'User deleted successfully', type: 'success'});
                 setConfirmDeleteDialog({visible: false, user: null});
             }).catch(error => setNotification({message: `Failed to delete refund: ${error}`, type: 'error'}));
@@ -155,9 +204,14 @@ function Users() {
     const createUser = () => {
         axios.post(apiEndpoints.createUser, newUser).then(response => {
             setNotification({message: 'User created successfully', type: 'success'});
-            fetchUsers();
+            fetchPaginatedUsers();
             closeDialog();
         }).catch(error => setNotification({message: 'Failed to create user ' + error, type: 'error'}));
+    }
+
+    const onPage = (e) => {
+        fetchPaginatedUsers({pageNumber: e.page + 1, pageSize: e.rows});
+
     }
 
     return (
@@ -166,11 +220,19 @@ function Users() {
                 header={<h2>Users</h2>}
                 data={users}
                 columns={columns}
-                paginatorLeftHandlers={[fetchUsers]}
+                paginatorLeftHandlers={[fetchPaginatedUsers]}
                 setNotification={setNotification}
+                sorting={sorting}
+                setSorting={setSorting}
+                filters={filters}
+                setFilters={setFilters}
+                paginationParams={pagination}
+                setPaginationParams={setPagination}
+                onPage={onPage}
+                loading={loading}
+                fetchPaginatedItems={fetchPaginatedUsers}
                 downloadFileName={'users'}
                 onDeleteRow={onDeleteRow}
-
             ></Table>
             <Button
                 icon="pi pi-plus"

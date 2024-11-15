@@ -14,9 +14,15 @@ const useSecurity = () => {
 
     const isAuthorizedToDelete = () => {
         if (!initialized) return false;
-        const roleList = ["SUPER_ADMIN", "ADMIN", "CUSTOMER_SERVICE", "SALES", "MARKETING"];
+        const roleList = ["SUPER_ADMIN", "ADMIN"];
         return roleList.some(role => keycloak.hasRealmRole(role));
     };
+
+    const isAuthorizedToDownloadData = () => {
+        if (!initialized) return false;
+        const roleList = ["SUPER_ADMIN"];
+        return roleList.some(role => keycloak.hasRealmRole(role));
+    }
 
     const getRoles = () => {
         return roles;
@@ -24,6 +30,7 @@ const useSecurity = () => {
 
     return {
         isAuthorizedToDelete,
+        isAuthorizedToDownloadData,
         getRoles,
     };
 };

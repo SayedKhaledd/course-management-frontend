@@ -10,11 +10,15 @@ import {Card} from 'primereact/card';
 import {InputText} from 'primereact/inputtext';
 import apiEndpoints from "../apiEndpoints.js";
 import CellTemplate from "../templates/CellTemplate.jsx";
-import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import Table from "../components/Table.jsx";
-import {genericSortFunction, simplifyDate} from "../utils.js";
+import {FilterMatchMode} from 'primereact/api';
 import {ConfirmDialog} from "primereact/confirmdialog";
-import {COUNTRIES, INITIAL_COURSES, NATIONALITIES} from "../constants.js";
+import {COUNTRIES, NATIONALITIES} from "../constants.js";
+import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
+import DynamicListRowFilterTemplate from "../templates/DynamicListRowFilterTemplate.jsx";
+import staticListRowFilterTemplate from "../templates/StaticListRowFilterTemplate.jsx";
+import {getCriteria, getCustomSorting, simplifyDate} from "../utils.js";
+import useSecurity from "../hooks/useSecurity.js";
 import {Dropdown} from "primereact/dropdown";
 
 
@@ -24,21 +28,75 @@ function Clients() {
     const [editingState, setEditingState] = useState({id: '', columnField: '', editedValue: null});
     const [statusOptions, setStatusOptions] = useState([]);
     const [referralSourceOptions, setReferralSourceOptions] = useState([]);
+    const [initialCourseOptions, setInitialCourseOptions] = useState([]);
     const axios = useAxios();
     const navigate = useNavigate();
+    const security = useSecurity();
     const [notification, setNotification] = useState({message: '', type: ''});
     const [displayDialog, setDisplayDialog] = useState(false);
     const [confirmDeleteDialog, setConfirmDeleteDialog] = useState({visible: false, client: null});
-    const [filters, setFilters] = useState({});
-
-
-    const fetchClients = () => {
-        axios.get(apiEndpoints.clients,)
-            .then(response => setClients(response.data.response))
-            .catch(error =>
-                setNotification({message: `Failed to fetch clients: ${error}`, type: 'error'})
-            )
+    const initialFilters = JSON.parse(sessionStorage.getItem('clientsFilters')) || {
+        name: {value: null, matchMode: 'contains'},
+        email: {value: null, matchMode: 'contains'},
+        phone: {value: null, matchMode: 'contains'},
+        countries: {value: [], matchMode: FilterMatchMode.IN},
+        nationalities: {value: [], matchMode: FilterMatchMode.IN},
+        clientStatusIds: {value: [], matchMode: FilterMatchMode.IN},
+        initialCourseIds: {value: [], matchMode: FilterMatchMode.IN},
+        alternativePhone: {value: null, matchMode: 'contains'},
+        referralSourceIds: {value: [], matchMode: FilterMatchMode.IN},
+        description: {value: null, matchMode: 'contains'},
+        address: {value: null, matchMode: 'contains'},
+        createdBy: {value: null, matchMode: 'contains'},
+        modifiedBy: {value: null, matchMode: 'contains'},
+        createdDate: {value: null, matchMode: 'contains'},
+        modifiedDate: {value: null, matchMode: 'contains'},
     };
+
+    const [filters, setFilters] = useState(initialFilters);
+
+    const [pagination, setPagination] = useState({
+        pageNumber: 1,
+        pageSize: 10,
+        totalNumberOfElements: 0,
+    });
+
+    const initialSorting = JSON.parse(sessionStorage.getItem('clientsSorting')) || {
+        sortBy: "name",
+        sortDesc: false,
+        defaultSortField: "name",
+    }
+    const [sorting, setSorting] = useState(initialSorting);
+    const [loading, setLoading] = useState(true);
+
+
+    const fetchPaginatedItems = (paginationDetails = null) => {
+        const criteria = getCriteria(filters);
+        const customSorting = getCustomSorting(sorting);
+        const customPagination = paginationDetails || pagination;
+        axios.post(apiEndpoints.getPaginatedClients, {
+            ...customPagination,
+            ...customSorting,
+            criteria,
+        })
+            .then(response => {
+                const {pageNumber, pageSize, totalNumberOfElements, result} = response.data.response;
+                setPagination(prev => ({
+                    ...prev,
+                    pageNumber,
+                    pageSize,
+                    totalNumberOfElements,
+                }));
+                setClients(result);
+                setLoading(false);
+            })
+            .catch(error => {
+                setNotification({message: `Failed to fetch clients: ${error}`, type: 'error'});
+                setLoading(false);
+            });
+
+    };
+
     const fetchReferralSourceOptions = () => {
         axios.get(apiEndpoints.referralSources)
             .then(response =>
@@ -51,22 +109,37 @@ function Clients() {
             );
     }
     const fetchStatusOptions = () => {
-        axios.get(apiEndpoints.statuses)
+        axios.get(apiEndpoints.clientStatuses)
             .then(response =>
                 setStatusOptions(response.data.response.map(status => ({id: status.id, status: status.status}))))
             .catch(error =>
                 setNotification({message: `Failed to fetch status options: ${error}`, type: 'error'})
             );
     };
+    const fetchInitialCourseOptions = () => {
+        axios.get(apiEndpoints.initialCourses)
+            .then(response =>
+                setInitialCourseOptions(response.data.response.map(course => ({
+                    id: course.id,
+                    name: course.name
+                }))))
+            .catch(error =>
+                setNotification({message: `Failed to fetch initial course options: ${error}`, type: 'error'})
+            );
+    }
 
     useEffect(() => {
-        fetchClients();
+        sessionStorage.setItem('clientsFilters', JSON.stringify(filters));
+        sessionStorage.setItem('clientsSorting', JSON.stringify(sorting));
+    }, [filters, sorting]);
+
+    useEffect(() => {
+        fetchPaginatedItems();
         fetchStatusOptions();
+        fetchInitialCourseOptions();
         fetchReferralSourceOptions();
-        setFilters({
-            createdDate: {value: new Date().toISOString().split('T')[0], matchMode: 'contains'}  // Set the default filter value and mode here
-        });
     }, []);
+
 
     const onEdit = (id, columnField, editedValue) => {
         setEditingState({id, columnField, editedValue});
@@ -82,7 +155,7 @@ function Clients() {
         const endpoint = apiEndpoints.getClientUpdateEndpoint(clientId, columnField, editingState.editedValue.id);
         const payload = {[columnField]: editingState.editedValue};
         axios.patch(endpoint, payload).then(() => {
-            fetchClients();
+            fetchPaginatedItems();
             onCancelEdit();
             setNotification({message: `Updated ${columnField} successfully`, type: 'success'});
 
@@ -105,6 +178,12 @@ function Clients() {
                     editedValue: referralSourceOptions.find(option => option.source === e.target.value)
                 });
                 break;
+            case 'initialCourse':
+                setEditingState({
+                    ...editingState,
+                    editedValue: initialCourseOptions.find(option => option.name === e.target.value)
+                });
+                break;
             case 'country':
                 setEditingState({
                     ...editingState,
@@ -117,12 +196,7 @@ function Clients() {
                     editedValue: NATIONALITIES.find(option => option === e.target.value)
                 });
                 break;
-            case 'initialCourseName':
-                setEditingState({
-                    ...editingState,
-                    editedValue: INITIAL_COURSES.find(option => option === e.target.value)
-                });
-                break;
+
         }
 
     };
@@ -159,18 +233,21 @@ function Clients() {
             body: (rowData) => CellTemplate(rowData, 'phone', editingState, cellHandlers)
         },
         {
-            field: 'alternativePhone',
-            header: 'Alternative Phone',
-            filter: true,
-            sortable: true,
-            body: (rowData) => CellTemplate(rowData, 'alternativePhone', editingState, cellHandlers)
-        },
-        {
-            field: 'initialCourseName',
+            field: 'initialCourse',
             header: 'Initial Course',
+            listFieldName: 'name',
             filter: true,
             sortable: true,
-            body: (rowData) => DropDownCellTemplate(rowData, 'initialCourseName', null, editingState, INITIAL_COURSES, dropDownCellHandlers)
+            filterElement: DynamicListRowFilterTemplate({
+                value: filters.initialCourseIds.value,
+                filterApplyCallback: (value) => {
+                    setFilters({
+                        ...filters,
+                        initialCourseIds: {value, matchMode: FilterMatchMode.IN},
+                    })
+                },
+            }, initialCourseOptions, 'name'),
+            body: (rowData) => DropDownCellTemplate(rowData, 'initialCourse', 'name', editingState, initialCourseOptions, dropDownCellHandlers)
         },
         {
             field: 'clientStatus',
@@ -178,9 +255,15 @@ function Clients() {
             listFieldName: 'status',
             filter: true,
             sortable: true,
-            sortFunction: (e) => {
-                return genericSortFunction(e, 'clientStatus', 'status');
-            },
+            filterElement: DynamicListRowFilterTemplate({
+                value: filters.clientStatusIds.value,
+                filterApplyCallback: (value) => {
+                    setFilters({
+                        ...filters,
+                        clientStatusIds: {value, matchMode: FilterMatchMode.IN},
+                    })
+                },
+            }, statusOptions, 'status'),
             body: (rowData) => DropDownCellTemplate(rowData, 'clientStatus', 'status', editingState, statusOptions, dropDownCellHandlers)
         },
         {
@@ -189,16 +272,40 @@ function Clients() {
             listFieldName: 'source',
             filter: true,
             sortable: true,
-            sortFunction: (e) => {
-                return genericSortFunction(e, 'referralSource', 'source');
-            },
+            filterElement: DynamicListRowFilterTemplate({
+                value: filters.referralSourceIds.value,
+                filterApplyCallback: (value) => {
+                    setFilters({
+                        ...filters,
+                        referralSourceIds: {value, matchMode: FilterMatchMode.IN},
+                    })
+                },
+            }, referralSourceOptions, 'source'),
+
             body: (rowData) => DropDownCellTemplate(rowData, 'referralSource', 'source', editingState, referralSourceOptions, dropDownCellHandlers)
         },
+
         {
+            field: 'description',
+            header: 'Description',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'description', editingState, cellHandlers)
+        }
+
+        , {
             field: 'country',
             header: 'Country',
             filter: true,
             sortable: true,
+            filterElement: staticListRowFilterTemplate({
+                value: filters.countries.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    countries: {value, matchMode: FilterMatchMode.IN},
+                }),
+            }, COUNTRIES),
+
             body: (rowData) => DropDownCellTemplate(rowData, 'country', null, editingState, COUNTRIES, dropDownCellHandlers)
         },
         {
@@ -206,6 +313,14 @@ function Clients() {
             header: 'Nationality',
             filter: true,
             sortable: true,
+            filterElement: staticListRowFilterTemplate({
+                value: filters.nationalities.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    nationalities: {value, matchMode: FilterMatchMode.IN},
+                })
+            }, NATIONALITIES),
+
             body: (rowData) => DropDownCellTemplate(rowData, 'nationality', null, editingState, NATIONALITIES, dropDownCellHandlers)
         },
         {
@@ -214,6 +329,13 @@ function Clients() {
             filter: true,
             sortable: true,
             body: (rowData) => CellTemplate(rowData, 'address', editingState, cellHandlers)
+        },
+        {
+            field: 'alternativePhone',
+            header: 'Alternative Phone',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'alternativePhone', editingState, cellHandlers)
         },
         {
             field: 'createdDate',
@@ -248,7 +370,8 @@ function Clients() {
             filter: true,
             sortable: true,
             body: (rowData) => CellTemplate(rowData, 'modifiedBy', editingState, cellHandlers, false)
-        }];
+        }
+    ];
 
     const onRowClick = (client) => {
         navigate(`/client/${client.id}`, {state: {client}});
@@ -266,21 +389,30 @@ function Clients() {
 
     const createClient = () => {
         closeDialog();
-        axios.post(apiEndpoints.createClient, newClient)
+        axios.post(apiEndpoints.createClient, {
+            ...newClient,
+            clientStatusId: newClient.clientStatus?.id,
+            initialCourseId: newClient.initialCourse.id,
+            referralSourceId: newClient.referralSource?.id,
+            email: newClient.email || null,
+        })
             .then(() => {
-                fetchClients();
+                fetchPaginatedItems();
                 setNotification({message: 'Client created successfully', type: 'success'});
 
             }).catch(error => setNotification({message: `Failed to create client: ${error}`, type: 'error'}));
 
     };
     const onDeleteRow = (rowData) => {
-        setConfirmDeleteDialog({visible: true, client: rowData});
+        if (security.isAuthorizedToDelete())
+            setConfirmDeleteDialog({visible: true, client: rowData});
+        else
+            setNotification({message: 'You are not authorized to delete clients', type: 'error'});
     }
     const deleteClient = () => {
         axios.delete(apiEndpoints.getClientDeleteEndpoint(confirmDeleteDialog.client.id))
             .then(() => {
-                fetchClients();
+                fetchPaginatedItems();
                 setNotification({message: 'Client deleted successfully', type: 'success'});
                 setConfirmDeleteDialog({visible: false, client: null});
             }).catch(error => setNotification({message: `Failed to delete client: ${error}`, type: 'error'}));
@@ -288,15 +420,28 @@ function Clients() {
     const cancelDeleteClient = () => {
         setConfirmDeleteDialog({visible: false, client: null});
     }
+    const onPage = (e) => {
+        fetchPaginatedItems({pageNumber: e.page + 1, pageSize: e.rows});
+    }
+
 
     return (<>
             <Table
                 header={<h2>Clients</h2>}
                 columns={columns} data={clients} onRowClick={onRowClick} onDeleteRow={onDeleteRow}
                 setNotification={setNotification}
-                paginatorLeftHandlers={{fetchClients, fetchStatusOptions}}
-                downloadFileName="clients"
+                paginatorLeftHandlers={{fetchClients: fetchPaginatedItems, fetchStatusOptions}}
+                onPage={onPage}
+                paginationParams={pagination}
+                setPaginationParams={setPagination}
+                fetchPaginatedItems={fetchPaginatedItems}
+                sorting={sorting}
+                setSorting={setSorting}
                 filters={filters}
+                setFilters={setFilters}
+                loading={loading}
+                downloadFileName="clients"
+
             ></Table>
             <Button
                 icon="pi pi-plus"
@@ -315,7 +460,7 @@ function Clients() {
                 <Card title="Client Details">
                     <div className="p-fluid">
                         <div className="p-field">
-                            <label htmlFor="name">Name</label>
+                            <label htmlFor="name">Name *</label>
                             <InputText id="name"
                                        onInput={(e) => setNewClient({...newClient, name: e.target.value})}/>
                         </div>
@@ -325,23 +470,99 @@ function Clients() {
                                        onInput={(e) => setNewClient({...newClient, email: e.target.value})}/>
                         </div>
                         <div className="p-field">
-                            <label htmlFor="phone">Phone</label>
+                            <label htmlFor="phone">Phone *</label>
                             <InputText id="phone"
                                        onInput={(e) => setNewClient({...newClient, phone: e.target.value})}/>
                         </div>
 
                         <div className="p-field">
-                            <label htmlFor="initialCourseName">Initial Course Name</label>
-                            <Dropdown id="initialCourseName"
-                                      options={INITIAL_COURSES}
-                                      value={newClient.initialCourseName || ''}
-                                      onChange={(e) => setNewClient({
-                                          ...newClient,
-                                          initialCourseName: e.target.value
-                                      })}/>
-
-
+                            <label htmlFor="course">Initial Course *</label>
+                            <Dropdown id="course"
+                                      value={newClient?.initialCourse?.name}
+                                      options={initialCourseOptions.map(course => course.name)}
+                                      placeholder="Select a course"
+                                      onChange={(e) =>
+                                          setNewClient({
+                                                  ...newClient,
+                                                  initialCourse: initialCourseOptions.find(course => course.name === e.target.value)
+                                              }
+                                          )}
+                            />
                         </div>
+
+                        <div className="p-field">
+                            <label htmlFor="clientStatus">Status</label>
+                            <Dropdown id="clientStatus"
+                                      value={newClient?.clientStatus?.status}
+                                      options={statusOptions.map(status => status.status)}
+                                      placeholder="Select a status"
+                                      onChange={(e) =>
+                                          setNewClient({
+                                                  ...newClient,
+                                                  clientStatus: statusOptions.find(status => status.status === e.target.value)
+                                              }
+                                          )}
+                            />
+                        </div>
+
+                        <div className="p-field">
+                            <label htmlFor="referralSource">Referral Source</label>
+                            <Dropdown id="referralSource"
+                                      value={newClient?.referralSource?.source}
+                                      options={referralSourceOptions.map(source => source.source)}
+                                      placeholder="Select a source"
+                                      onChange={(e) =>
+                                          setNewClient({
+                                                  ...newClient,
+                                                  referralSource: referralSourceOptions.find(source => source.source === e.target.value)
+                                              }
+                                          )}
+                            />
+                        </div>
+
+                        <div className="p-field">
+                            <label htmlFor="description">Description</label>
+                            <InputText id="description"
+                                       onInput={(e) => setNewClient({...newClient, description: e.target.value})}/>
+                        </div>
+
+                        <div className="p-field">
+                            <label htmlFor="country">Country</label>
+                            <Dropdown id="country"
+                                      value={newClient?.country}
+                                      options={COUNTRIES}
+                                      placeholder="Select a country"
+                                      onChange={(e) =>
+                                          setNewClient({
+                                                  ...newClient,
+                                                  country: COUNTRIES.find(country => country === e.target.value)
+                                              }
+                                          )}
+                            />
+                        </div>
+
+                        <div className="p-field">
+                            <label htmlFor="nationality">Nationality</label>
+                            <Dropdown id="nationality"
+                                      value={newClient?.nationality}
+                                      options={COUNTRIES}
+                                      placeholder="Select a nationality"
+                                      onChange={(e) =>
+                                          setNewClient({
+                                                  ...newClient,
+                                                  nationality: NATIONALITIES.find(nationality => nationality === e.target.value)
+                                              }
+                                          )}
+                            />
+                        </div>
+
+
+                        <div className="p-field">
+                            <label htmlFor="address">Address</label>
+                            <InputText id="address"
+                                       onInput={(e) => setNewClient({...newClient, address: e.target.value})}/>
+                        </div>
+
 
                         <div className="p-d-flex p-jc-end">
                             <Button label="Save" icon="pi pi-check" onClick={createClient} className="p-mr-2"/>

@@ -18,6 +18,7 @@ export function formatDateToLocalDateTime(userInputDate) {
 
 }
 
+
 export const downloadCSV = (data, columns, name) => {
     const headers = columns.map(col => col.header);
     const rows = data.map(client => columns.map(col => {
@@ -30,10 +31,8 @@ export const downloadCSV = (data, columns, name) => {
         return value;
     }));
 
-    let csvContent = "data:text/csv;charset=utf-8,"
-        + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-
-    const encodedUri = encodeURI(csvContent);
+    let csvContent = "\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join('\n'); // Add BOM here
+    const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
     link.setAttribute('download', name + '.csv');
@@ -65,6 +64,7 @@ export const exportPdf = (exportColumns, data, filename = 'exportedFile') => {
             return row[col.field];
         })),
         columnStyles: columnStyles,
+        styles: {font: 'Amiri'},
         width: 'auto'
     });
 
@@ -100,3 +100,17 @@ export const genericSortFunction = (e, field, subField, nestedField = null) => {
     });
     return sortedData;
 };
+
+export const getCriteria = (filters) => {
+    return Object.fromEntries(
+        Object.entries(filters)
+            .filter(([, filter]) => filter.value !== null)
+            .map(([key, filter]) => [key, filter.value])
+    )
+};
+export const getCustomSorting = (sorting) => {
+    return {
+        sortBy: sorting.sortBy == null ? sorting.defaultSortField : sorting.sortBy,
+        sortDesc: sorting.sortDesc
+    };
+}

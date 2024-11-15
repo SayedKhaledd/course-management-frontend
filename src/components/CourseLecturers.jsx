@@ -10,9 +10,11 @@ import apiEndpoints from "../apiEndpoints.js";
 import CellTemplate from "../templates/CellTemplate.jsx";
 import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import {TRUE_FALSE_OPTIONS} from "../constants.js";
-import {simplifyDate} from "../utils.js";
+import {getCriteria, getCustomSorting, simplifyDate} from "../utils.js";
 import {useParams} from "react-router-dom";
 import useAxios from "../hooks/useAxios.js";
+import {FilterMatchMode} from "primereact/api";
+import StaticListRowFilterTemplate from "../templates/StaticListRowFilterTemplate.jsx";
 
 const CourseLecturers = ({}) => {
     const {id} = useParams();
@@ -30,16 +32,56 @@ const CourseLecturers = ({}) => {
         courseLecturer: null
     });
 
+    const [filters, setFilters] = useState({
+        courseId: {value: id, matchMode: 'contains'},
+        name: {value: null, matchMode: FilterMatchMode.CONTAINS},
+        paidInPercentage: {value: [], matchMode: FilterMatchMode.IN},
+        percentage: {value: null, matchMode: 'contains'},
+        totalPercentageCost: {value: null, matchMode: 'contains'},
+        noOfLectures: {value: null, matchMode: 'contains'},
+        lectureCost: {value: null, matchMode: 'contains'},
+        totalFixedCost: {value: null, matchMode: 'contains'},
+        createdBy: {value: null, matchMode: 'contains'},
+        modifiedBy: {value: null, matchMode: 'contains'},
+        createdDate: {value: null, matchMode: 'contains'},
+        modifiedDate: {value: null, matchMode: 'contains'},
+    });
+    const [pagination, setPagination] = useState({
+        pageNumber: 1,
+        pageSize: 10,
+        totalNumberOfElements: 0,
+    });
 
-    const fetchCourseLecturers = () => {
-        axios.get(apiEndpoints.courseLecturersByCourseId(id))
-            .then(response => {
-                setCourseLecturers(response.data.response.map(courseLecturer => ({
-                    ...courseLecturer,
-                    paidInPercentage: courseLecturer.paidInPercentage ? "Yes" : "No"
-                })));
-            }).catch(error => {
-            setNotification({message: 'Failed to fetch course lecturers' + error, type: 'error'});
+    const [sorting, setSorting] = useState({
+        sortBy: "name",
+        sortDesc: false,
+        defaultSortField: "name",
+    });
+    const [loading, setLoading] = useState(true);
+
+
+    const fetchCourseLecturers = (paginationDetails = null) => {
+        setLoading(true);
+        const criteria = getCriteria(filters);
+        const customSorting = getCustomSorting(sorting);
+        const customPagination = paginationDetails || pagination;
+        axios.post(apiEndpoints.getPaginatedCourseLecturers, {
+            ...customPagination,
+            ...customSorting,
+            criteria,
+        }).then(response => {
+            const {pageNumber, pageSize, totalNumberOfElements, result} = response.data.response;
+            setPagination(prev => ({
+                ...prev,
+                pageNumber,
+                pageSize,
+                totalNumberOfElements,
+            }));
+            setCourseLecturers(result);
+            setLoading(false);
+        }).catch(error => {
+            setNotification({message: `Failed to fetch course lecturers: ${error}`, type: 'error'});
+            setLoading(false);
         });
     }
 
@@ -118,6 +160,14 @@ const CourseLecturers = ({}) => {
             header: 'Paid In Percentage',
             filter: true,
             sortable: true,
+            filterElement: StaticListRowFilterTemplate({
+                value: filters.paidInPercentage.value,
+                filterApplyCallback: (value) => setFilters({
+                    ...filters,
+                    paidInPercentage: {value, matchMode: FilterMatchMode.IN}
+                })
+            }, TRUE_FALSE_OPTIONS, true),
+
             body: (rowData) => DropDownCellTemplate(rowData, 'paidInPercentage', null, editingState, TRUE_FALSE_OPTIONS, dropDownCellHandlers)
         },
         {
@@ -234,13 +284,27 @@ const CourseLecturers = ({}) => {
         setDialogState({...dialogState, visible: false});
     }
 
+    const onPage = (e) => {
+        fetchCourseLecturers({pageNumber: e.page + 1, pageSize: e.rows});
+    }
+
 
     return (<>
 
         <Table
             header={'Course Lecturers'}
             onDeleteRow={onDelete}
-            columns={columns} data={courseLecturers} paginatorLeftHandlers={fetchCourseLecturers}
+            columns={columns} data={courseLecturers}
+            paginatorLeftHandlers={fetchCourseLecturers}
+            onPage={onPage}
+            paginationParams={pagination}
+            setPaginationParams={setPagination}
+            fetchPaginatedItems={fetchCourseLecturers}
+            sorting={sorting}
+            setSorting={setSorting}
+            filters={filters}
+            setFilters={setFilters}
+            loading={loading}
         ></Table>
 
         <Button

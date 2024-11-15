@@ -3,144 +3,9 @@ export const IMAGES_PATH = 'src/assets/images/';
 
 const VITE_BASE_URL = import.meta.env.VITE_BASE_URL;
 const VITE_KEYCLOAK_URL = import.meta.env.VITE_KEYCLOAK_URL;
-console.log("base url", VITE_BASE_URL)
-console.log("keycloak url", VITE_KEYCLOAK_URL)
 
 export const BASE_URL = VITE_BASE_URL || 'http://localhost:8090/api';
 export const KEYCLOAK_URL = VITE_KEYCLOAK_URL || 'http://localhost:8080/';
-
-export const PAGINATION_RESPONSE = [
-    "pageNumber",
-    "pageSize",
-    "totalNumberOfPages",
-    "totalNumberOfElements",
-    "isFirst",
-    "isLast"
-]
-export const PAGINATION_REQUEST = [
-    "pageNumber",
-    "pageSize",
-
-    "deletedRecords",
-    "sortBy",
-    "sortDesc"
-]
-//مصر
-// السعودية
-// ليبيا
-// العراق
-// الاردن
-// الكويت
-// البحرين
-// الامارات
-// عمان
-// تونس
-// الجزائر
-// المغرب
-// السودان
-// الصومال
-// الهند
-// باكستان
-// بنجلاديش
-// فلسطين
-// لبنان
-// سوريا
-// اليمن
-// نيجريا
-// روسيا
-// تركيا
-// جنوب أفريقيا
-// ألمانيا
-// انجلترا
-// ايرلندا
-// امريكا
-// اسبانيا
-// استراليا
-// كندا
-// قطر
-// الصين
-// افغانستان
-// كينيا
-// بوليفيا
-// زيمبابوى
-// بورتريكو
-// مينمار
-// نيبال
-// ماليزيا
-// غانا
-// سيريلانكا
-// كردستان
-// اثيوبيا
-// السويد
-// رومانيا
-// ايران
-// المالديف
-// كوت دى فوار
-// ارمينيا
-// اوكرنيا
-// فنلندا
-// بيرو
-// جاميكا
-// تشاد
-// بوتسوانا
-// البانيا
-// اندونسيا
-// البرازيل
-// بيلاروسيا
-// اوغندا
-// هولندا
-// تركمنستان
-// فرنسا
-// صربيا
-// سنغافوره
-// مالطا
-// بورونى
-// ترينداد وتوباجو
-// المكسيك
-// اليابان
-// اذربيجان
-// اليونان
-// ليبريا
-// تنزانيا
-// جورجيا
-// فيتنام
-// الجابون
-// النمسا
-// سيراليون
-// النيجر
-// لوكسمبورج
-// سوايزلاند
-// سانت فينسنت
-// دومينيكان
-// ايطاليا
-// بلجيكا
-// موريتانيا
-// الارجنتين
-// موزمبيق
-// زامبيا
-// جيبوتي
-// البرتغال
-// سيشل
-// جزر كايمان
-// بروناي
-// سويسرا
-// بوتان
-// رواندا
-// ليتوانيا
-// كولومبيا
-// مالي
-// بلغاريا
-// الفلبين
-// كازاخستان
-// الغابون
-// مقدونيا
-// كوسفو
-// التشيك
-// الدنمارك
-// سلوفاكيا
-// أفريقيا الوسطى
-// أخرى وضحها
-
 
 export const COUNTRIES = [
     "مصر", "السعودية", "ليبيا", "العراق", "الاردن", "الكويت", "البحرين", "الامارات",
@@ -181,12 +46,6 @@ export const NATIONALITIES = [
     "أخرى وضحها"
 ];
 
-export const INITIAL_COURSES = [
-    "MRCP", "MRCPch", "MRCOG", "MRCS", "MRCEM", "MRCPsych", "FRCA/EDAIC", "FRCR",
-    "FRCS/ICO", "Dermatology", "UKMLA", "INBDE", "MFDS", "USMLE", "MRCPath", "Dentist",
-    "Student", "Pharmacy", "MRCGP طب أسرة", "EDIC - ICU", "علاج طبيعي", "MCCQE",
-    "تمريض", "طب بيطري", "Other أخرى"
-];
 
 export const COURSE_PARTS = [
     "1", "2", "3", "Rev"]
