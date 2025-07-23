@@ -3,7 +3,7 @@ name: Deploy Frontend to aws
 on:
   push:
     branches:
-      - master
+      - nobranch
 
 jobs:
   build:
