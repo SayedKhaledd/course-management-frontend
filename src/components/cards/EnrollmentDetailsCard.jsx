@@ -155,6 +155,18 @@ const EnrollmentDetailsCard = ({
                 />
             )
         },
+
+        {
+            field: 'commission',
+            body: (rowData) => (
+                <TextFieldTemplate
+                    value={rowData.commission}
+                    field="commission"
+                    editingState={editingState}
+                    handlers={cellHandlers}
+                />
+            )
+        },
         {
             field: 'remainingAmount',
             body: (rowData) => (

@@ -135,16 +135,44 @@ const API_ENDPOINTS = {
     createUser: `${BASE_URL}/user`,
     refundStatuses: `${BASE_URL}/refund-status/all`,
 
-    getUpdateIsReceivedSales: (id, columnField, editedValue, paymentType) => `${BASE_URL}/sales/${id}/payment-type/${paymentType}/${columnField.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}/${editedValue}`,
-    getPaginatedClients:`${BASE_URL}/client/find-paginated-and-filtered`,
-    getPaginatedCourses:`${BASE_URL}/course/find-paginated-and-filtered`,
-    getPaginatedRefunds:`${BASE_URL}/refund/find-paginated-and-filtered`,
-    getPaginatedEnrollments:`${BASE_URL}/enrollment/find-paginated-and-filtered`,
-    getPaginatedInstallments:`${BASE_URL}/installment/find-paginated-and-filtered`,
-    getPaginatedCourseLecturers:`${BASE_URL}/course-lecturer/find-paginated-and-filtered`,
-    getPaginatedUsers:`${BASE_URL}/user/find-paginated-and-filtered`,
+    getUpdateIsReceived: (id, paymentType, isReceived) => `${BASE_URL}/sales/${id}/payment-type/${paymentType}/is-received/${isReceived}`,
+    getUpdatePaymentStatus: (id, paymentType, paymentStatus) => `${BASE_URL}/sales/${id}/payment-type/${paymentType}/payment-status/${paymentStatus}`,
+    getPaginatedClients: `${BASE_URL}/client/find-paginated-and-filtered`,
+    getPaginatedCourses: `${BASE_URL}/course/find-paginated-and-filtered`,
+    getPaginatedRefunds: `${BASE_URL}/refund/find-paginated-and-filtered`,
+    getPaginatedEnrollments: `${BASE_URL}/enrollment/find-paginated-and-filtered`,
+    getPaginatedInstallments: `${BASE_URL}/installment/find-paginated-and-filtered`,
+    getPaginatedCourseLecturers: `${BASE_URL}/course-lecturer/find-paginated-and-filtered`,
+    getPaginatedUsers: `${BASE_URL}/user/find-paginated-and-filtered`,
     enrollment: (enrollmentId) => `${BASE_URL}/enrollment/${enrollmentId}`,
     enrollmentByClientIdAndCourseId: (clientId, courseId) => `${BASE_URL}/enrollment/client/${clientId}/course/${courseId}`,
+    getPaginatedSales: `${BASE_URL}/sales/find-paginated-and-filtered`,
+    getSalesUpdateEndpoint: (saleId, column, paymentType, updateId) => {
+        switch (column) {
+            case 'isReceived':
+                updateId = updateId === 'Yes';
+                return API_ENDPOINTS.getUpdateIsReceived(saleId, paymentType, updateId);
+            case 'paymentStatus':
+                return API_ENDPOINTS.getUpdatePaymentStatus(saleId, paymentType, updateId.id);
+
+        }
+    },
+    evaluationStatuses: `${BASE_URL}/evaluation-status/all`,
+    getPaginatedEvaluations: `${BASE_URL}/evaluation/find-paginated-and-filtered`,
+    getEvaluationDeleteEndpoint: (evaluationId) => `${BASE_URL}/evaluation/${evaluationId}`,
+    createEvaluation: `${BASE_URL}/evaluation`,
+    updateEvaluationStatus: (evaluationId, statusId) => `${BASE_URL}/evaluation/${evaluationId}/evaluation-status/${statusId}`,
+    updateEvaluationField: (evaluationId, field) => `${BASE_URL}/evaluation/${evaluationId}/${field}`,
+    getEvaluationUpdateEndpoint: (evaluationId, column, updateId) => {
+        switch (column) {
+            case 'evaluationStatus':
+                return API_ENDPOINTS.updateEvaluationStatus(evaluationId, updateId.id);
+            default:
+                return API_ENDPOINTS.updateEvaluationField(evaluationId, column.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase());
+        }
+    },
+    parseClientCsv: `${BASE_URL}/client-csv/parse`,
+    saveParsedClients: `${BASE_URL}/client-csv/save`,
 
 };
 export default API_ENDPOINTS;

@@ -18,9 +18,26 @@ import {InputText} from "primereact/inputtext";
 import {useNavigate} from "react-router-dom";
 import useSecurity from "../hooks/useSecurity.js";
 
+export const FetchType = {
+    ALL: 'ALL', ONLY_ENROLLED: 'ONLY_ENROLLED', ONLY_REFUNDED: 'ONLY_REFUNDED'
+}
+
+function shouldFetchAction(fetchType, action) {
+    switch (fetchType) {
+        case FetchType.ALL:
+            return true;
+        case FetchType.ONLY_ENROLLED:
+            return action.action !== 'Refund';
+        case FetchType.ONLY_REFUNDED:
+            return action.action === 'Refund';
+        default:
+            return true;
+    }
+}
+
 const Enrollment = ({
                         client, fetchClient, course, fetchCourse, setNotification,
-                        referralSourceOptions
+                        referralSourceOptions, fetchType, header = 'Enrollments'
                     }) => {
     const axios = useAxios();
     const navigate = useNavigate();
@@ -74,8 +91,6 @@ const Enrollment = ({
         defaultSortField: "id",
     });
     const [loading, setLoading] = useState(true);
-
-
     const fetchPaginatedEnrollments = (paginationDetails = null) => {
         setLoading(true);
         const criteria = getCriteria(filters);
@@ -131,11 +146,23 @@ const Enrollment = ({
     const fetchActionOptions = () => {
         axios.get(apiEndpoints.actionTaken)
             .then(response => {
-                setActionOptions(response.data.response.map(action => ({action: action.action, id: action.id})));
-            }).catch(error => {
-            setNotification({message: 'Failed to fetch action options' + error, type: 'error'});
-        });
-    }
+                const actions = response.data.response;
+                setActionOptions(actions);
+                const updatedActionIds = actions
+                    .filter(action => shouldFetchAction(fetchType, action))
+                    .map(action => action.id);
+
+                setFilters({
+                    ...filters, actionTakenIds: {value: updatedActionIds, matchMode: FilterMatchMode.IN,}
+                });
+            })
+            .catch(error => {
+                setNotification({message: 'Failed to fetch action options' + error, type: 'error'});
+            });
+    };
+    useEffect(() => {
+        fetchPaginatedEnrollments();
+    }, [filters]);
 
 
     useEffect(() => {
@@ -150,10 +177,10 @@ const Enrollment = ({
                 fetchCourse();
             }
         }
+        fetchActionOptions();
         fetchPaginatedEnrollments();
         fetchPaymentMethodOptions();
         fetchPaymentStatusOptions();
-        fetchActionOptions();
     }, []);
 
 
@@ -297,6 +324,13 @@ const Enrollment = ({
             body: (rowData) => CellTemplate(rowData, 'amountPaid', editingEnrollmentState, cellHandlers)
         },
         {
+            field: 'commission',
+            header: 'Commission',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'commission', editingEnrollmentState, cellHandlers)
+        },
+        {
             field: 'remainingAmount',
             header: 'Remaining Amount',
             filter: true,
@@ -387,7 +421,7 @@ const Enrollment = ({
                     ...filters,
                     actionTakenIds: {value, matchMode: FilterMatchMode.IN},
                 })
-            }, actionOptions, 'action'),
+            }, actionOptions.filter(action => shouldFetchAction(fetchType, action)), 'action'),
             body: (rowData) => DropDownCellTemplate(rowData, 'actionTaken', 'action', editingEnrollmentState, actionOptions, dropDownCellHandlers)
         },
         {
@@ -489,7 +523,7 @@ const Enrollment = ({
             ...dialogState,
             newEnrollment: {
                 ...dialogState.newEnrollment,
-                [field+'Id']: listOptions.find(course => course[listFieldName] === e.target.value).id,
+                [field + 'Id']: listOptions.find(course => course[listFieldName] === e.target.value).id,
                 [field]: listOptions.find(course => course[listFieldName] === e.target.value)
             }
         });
@@ -543,7 +577,7 @@ const Enrollment = ({
     return (
         <>
             <Table
-                header={'Enrollments'}
+                header={header}
                 onRowClick={onRowClick}
                 data={enrollments} columns={columns} paginatorLeftHandlers={fetchPaginatedEnrollments}
                 downloadFileName={'enrollments'}
@@ -634,7 +668,15 @@ const Enrollment = ({
                                            }}
                                 />
                             </div>
-
+                            <div className="p-field">
+                                <label htmlFor="commission">Commission</label>
+                                <InputText id="commission"
+                                           value={dialogState.newEnrollment?.commission}
+                                           onChange={(e) => {
+                                               onFieldChange(e, 'commission');
+                                           }}
+                                />
+                            </div>
 
                         </div>
 

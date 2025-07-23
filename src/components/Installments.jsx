@@ -2,8 +2,8 @@ import React, {useEffect, useState} from 'react';
 import useAxios from "../hooks/useAxios.js";
 
 import 'primeicons/primeicons.css';
-import Table from "../components/Table.jsx";
-import Notification from "../components/Notification.jsx";
+import Table from "./Table.jsx";
+import Notification from "./Notification.jsx";
 import apiEndpoints from "../apiEndpoints.js";
 import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import CellTemplate from "../templates/CellTemplate.jsx";
@@ -13,8 +13,25 @@ import {FilterMatchMode} from "primereact/api";
 import DynamicListRowFilterTemplate from "../templates/DynamicListRowFilterTemplate.jsx";
 import useSecurity from "../hooks/useSecurity.js";
 
-function Installments({enrollmentId = null, refresh = false, fetchEnrollment=null}) {
-    console.log(enrollmentId);
+export const FetchInstallmentType = {
+    ALL: 'ALL', DONE_AND_WAITING: 'DONE_AND_WAITING', ONLY_CANCELLED: 'ONLY_CANCELLED'
+}
+
+function shouldFetchPaymentStatus(fetchType, status) {
+    switch (fetchType) {
+        case FetchInstallmentType.ALL:
+            return true;
+        case FetchInstallmentType.DONE_AND_WAITING:
+            return status.status !== 'Canceled';
+        case FetchInstallmentType.ONLY_CANCELLED:
+            return status.status === 'Canceled';
+        default:
+            return true;
+    }
+}
+
+
+function Installments({enrollmentId = null, fetchInstallmentType, refresh = false, fetchEnrollment = null, header = 'Installments'}) {
     const [installments, setInstallments] = useState([]);
     const [editingState, setEditingState] = useState({id: '', columnField: '', editedValue: null});
     const [paymentMethodOptions, setPaymentMethodOptions] = useState([]);
@@ -85,6 +102,13 @@ function Installments({enrollmentId = null, refresh = false, fetchEnrollment=nul
     const fetchPaymentStatusOptions = () => {
         axios.get(apiEndpoints.paymentStatuses).then(response => {
             setPaymentStatusOptions(response.data.response);
+            const statuses = response.data.response;
+            setPaymentStatusOptions(statuses);
+            const updatedPaymentStatusIds = statuses
+                .filter(status => shouldFetchPaymentStatus(fetchInstallmentType, status)).map(status => status.id);
+            setFilters({
+                ...filters, paymentStatusIds: {value: updatedPaymentStatusIds, matchMode: FilterMatchMode.IN,}
+            });
         }).catch(error => setNotification({
             message: 'Failed to fetch payment status options ' + error, type: 'error'
         }));
@@ -137,7 +161,7 @@ function Installments({enrollmentId = null, refresh = false, fetchEnrollment=nul
         const payload = {[columnField]: editingState.editedValue};
         axios.patch(endpoint, payload).then(() => {
             fetchPaginatedInstallments();
-            if(fetchEnrollment)
+            if (fetchEnrollment)
                 fetchEnrollment();
             onCancelEdit();
             setNotification({message: `Updated ${columnField} successfully`, type: 'success'});
@@ -232,7 +256,7 @@ function Installments({enrollmentId = null, refresh = false, fetchEnrollment=nul
                     ...filters,
                     paymentStatusIds: {value, matchMode: FilterMatchMode.IN},
                 })
-            }, paymentStatusOptions, 'status'),
+            }, paymentStatusOptions.filter(status => shouldFetchPaymentStatus(fetchInstallmentType, status)), 'status'),
             body: (rowData) => DropDownCellTemplate(rowData, 'paymentStatus', 'status', editingState, paymentStatusOptions, dropDownCellHandlers)
         }
 
@@ -263,7 +287,7 @@ function Installments({enrollmentId = null, refresh = false, fetchEnrollment=nul
     return (
         <>
             <Table
-                header={<h2>Installments</h2>}
+                header={header}
                 data={installments}
                 columns={columns}
                 onDeleteRow={onDeleteRow}

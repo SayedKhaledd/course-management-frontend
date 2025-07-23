@@ -174,6 +174,17 @@ const ClientDetailsCard = ({
             )
         },
         {
+            field: 'notes',
+            body: (rowData) => (
+                <TextFieldTemplate
+                    value={rowData.notes}
+                    field="notes"
+                    editingState={editingState}
+                    handlers={cellHandlers}
+                />
+            )
+        },
+        {
             field: 'clientStatus',
             listFieldName: 'status',
             body: (rowData) => (

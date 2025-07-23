@@ -1,4 +1,4 @@
-import Enrollment from "../components/Enrollment.jsx";
+import Enrollment, {FetchType} from "../components/Enrollment.jsx";
 import {useParams} from "react-router-dom";
 import React, {useEffect, useState} from "react";
 import CourseDetailsCard from "../components/cards/CourseDetailsCard.jsx";
@@ -14,7 +14,6 @@ const CourseDetails = () => {
     const [courseStatusOptions, setCourseStatusOptions] = useState([]);
     const [notification, setNotification] = useState({message: '', type: ''});
     const [referralSourceOptions, setReferralSourceOptions] = useState([]);
-
 
     const fetchCourse = () => {
         axios.get(apiEndpoints.course(id))
@@ -62,6 +61,18 @@ const CourseDetails = () => {
                 fetchCourse={fetchCourse}
                 setNotification={setNotification}
                 referralSourceOptions={referralSourceOptions}
+                fetchType={FetchType.ONLY_ENROLLED}
+                header={'Enrolled Clients'}
+            />
+
+            <div style={{margin: '10px'}}></div>
+            <Enrollment
+                course={course}
+                fetchCourse={fetchCourse}
+                setNotification={setNotification}
+                referralSourceOptions={referralSourceOptions}
+                fetchType={FetchType.ONLY_REFUNDED}
+                header={'Refunded Students'}
             />
             <div style={{margin: '10px'}}></div>
             <CourseLecturers/>

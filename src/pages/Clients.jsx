@@ -36,6 +36,7 @@ function Clients() {
     const [displayDialog, setDisplayDialog] = useState(false);
     const [confirmDeleteDialog, setConfirmDeleteDialog] = useState({visible: false, client: null});
     const initialFilters = JSON.parse(sessionStorage.getItem('clientsFilters')) || {
+        id: {value: null, matchMode: 'contains'},
         name: {value: null, matchMode: 'contains'},
         email: {value: null, matchMode: 'contains'},
         phone: {value: null, matchMode: 'contains'},
@@ -211,6 +212,12 @@ function Clients() {
 
     const columns = [
         {
+            field: 'id',
+            header: 'Id',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'id', editingState, cellHandlers, false)
+        }, {
             field: 'name',
             header: 'Name',
             filter: true,
@@ -291,6 +298,13 @@ function Clients() {
             filter: true,
             sortable: true,
             body: (rowData) => CellTemplate(rowData, 'description', editingState, cellHandlers)
+        },
+        {
+            field: 'notes',
+            header: 'Notes',
+            filter: true,
+            sortable: true,
+            body: (rowData) => CellTemplate(rowData, 'notes', editingState, cellHandlers)
         }
 
         , {
@@ -344,7 +358,7 @@ function Clients() {
             sortable: true,
             body: (rowData) => CellTemplate({
                 ...rowData,
-                createdDate: simplifyDate(rowData.modifiedDate)
+                createdDate: simplifyDate(rowData.createdDate)
             }, 'createdDate', editingState, cellHandlers, false)
         },
         {
@@ -424,8 +438,20 @@ function Clients() {
         fetchPaginatedItems({pageNumber: e.page + 1, pageSize: e.rows});
     }
 
+    const navigateToUploadCsv = () => {
+        navigate('/clients/upload-csv');
+    }
 
     return (<>
+
+            <Button
+                label="Upload CSV"
+                icon="pi pi-upload"
+                className="p-button-rounded p-button-primary"
+                style={{position: 'fixed', marginTop: '200px', bottom: '16px', right: '200px', zIndex: 1000}}
+                onClick={navigateToUploadCsv}/>
+
+
             <Table
                 header={<h2>Clients</h2>}
                 columns={columns} data={clients} onRowClick={onRowClick} onDeleteRow={onDeleteRow}
@@ -545,7 +571,7 @@ function Clients() {
                             <label htmlFor="nationality">Nationality</label>
                             <Dropdown id="nationality"
                                       value={newClient?.nationality}
-                                      options={COUNTRIES}
+                                      options={NATIONALITIES}
                                       placeholder="Select a nationality"
                                       onChange={(e) =>
                                           setNewClient({

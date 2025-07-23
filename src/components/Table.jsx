@@ -103,11 +103,11 @@ const Table = ({
     }, [filters, sorting]);
 
     useEffect(() => {
-        sessionStorage.setItem('`selectedColumns_' + downloadFileName,  JSON.stringify(selectedColumns));
+        sessionStorage.setItem('`selectedColumns_' + downloadFileName, JSON.stringify(selectedColumns));
     }, [selectedColumns]);
 
     return (
-        <>
+
             <DataTable
                 header={columnSelectionTemplate}
                 value={data}
@@ -118,7 +118,7 @@ const Table = ({
                 first={(paginationParams.pageNumber - 1) * paginationParams.pageSize}
                 onPage={onPage}
                 lazy
-                rowsPerPageOptions={[5, 10, 400]}
+                rowsPerPageOptions={[5, 10, 100, 200, 400]}
                 paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
                 currentPageReportTemplate="{first} to {last} of {totalRecords} records"
                 paginatorLeft={paginatorLeft}
@@ -171,7 +171,6 @@ const Table = ({
                     style={{width: '100px', textAlign: 'center'}}
                 />
             </DataTable>
-        </>
 
     );
 };

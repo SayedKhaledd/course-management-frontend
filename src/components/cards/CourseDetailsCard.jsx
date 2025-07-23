@@ -96,13 +96,14 @@ const CourseDetailsCard = ({course, setCourse, fetchCourse, courseStatusOptions,
             )
         },
         {
-            field: 'part',
+            field: 'numberOfParticipants',
             body: (rowData) => (
                 <TextFieldTemplate
-                    value={rowData.part}
-                    field="part"
+                    value={rowData.numberOfParticipants+""}
+                    field="numberOfParticipants"
                     editingState={editingState}
                     handlers={cellHandlers}
+                    isEditable={false}
                 />
             )
         },

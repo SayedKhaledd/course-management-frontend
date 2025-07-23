@@ -13,8 +13,6 @@ import {getCriteria, getCustomSorting, simplifyDate} from "../utils.js";
 import DropDownCellTemplate from "../templates/DropDownCellTemplate.jsx";
 import {useNavigate} from "react-router-dom";
 import {ConfirmDialog} from "primereact/confirmdialog";
-import {COURSE_PARTS} from "../constants.js";
-import {Dropdown} from "primereact/dropdown";
 import {FilterMatchMode} from "primereact/api";
 import DynamicListRowFilterTemplate from "../templates/DynamicListRowFilterTemplate.jsx";
 import useSecurity from "../hooks/useSecurity.js";
@@ -36,9 +34,9 @@ function GenericCourses({
     const [filters, setFilters] = useState({
         name: {value: null, matchMode: 'contains'},
         code: {value: null, matchMode: 'contains'},
-        part: {value: null, matchMode: 'contains'},
         description: {value: null, matchMode: 'contains'},
         price: {value: null, matchMode: 'contains'},
+        numberOfParticipants: {value: null, matchMode: 'contains'},
         startDate: {value: null, matchMode: 'contains'},
         isInitial: {value: isInitial, matchMode: FilterMatchMode.EQUALS},
         endDate: {value: null, matchMode: 'contains'},
@@ -64,7 +62,6 @@ function GenericCourses({
 
     const fetchCourseStatusOptions = () => {
         axios.get(apiEndpoints.courseStatuses).then(response => {
-            console.log(response.data.response);
             setCourseStatusOptions(response.data.response);
         }).catch(error => setNotification({message: 'Failed to fetch course options ' + error, type: 'error'}))
         ;
@@ -153,11 +150,6 @@ function GenericCourses({
                     editedValue: courseStatusOptions.find(option => option.status === e.target.value)
                 });
                 break;
-            case 'part':
-                setEditingState({
-                    ...editingState,
-                    editedValue: COURSE_PARTS.find(part => part === e.target.value)
-                });
         }
 
     };
@@ -184,20 +176,21 @@ function GenericCourses({
             sortable: true,
             body: (rowData) => CellTemplate(rowData, 'name', editingState, cellHandlers)
         },
-        {
-            field: 'part',
-            header: 'Part',
-            filter: true,
-            sortable: true,
-            body: (rowData) => DropDownCellTemplate(rowData, 'part', null, editingState, COURSE_PARTS, dropDownCellHandlers)
-        },
         ...(isInitial === false ? [{
             field: 'price',
             header: 'Price',
             filter: true,
             sortable: true,
             body: (rowData) => CellTemplate(rowData, 'price', editingState, cellHandlers)
-        },
+        }
+            ,
+            {
+                field: 'numberOfParticipants',
+                header: 'Number of Participants',
+                filter: true,
+                sortable: true,
+                body: (rowData) => CellTemplate(rowData, 'numberOfParticipants', editingState, cellHandlers, false)
+            },
             {
                 field: 'courseStatus',
                 header: 'Status',
@@ -242,7 +235,7 @@ function GenericCourses({
             sortable: true,
             body: (rowData) => CellTemplate({
                 ...rowData,
-                createdDate: simplifyDate(rowData.modifiedDate)
+                createdDate: simplifyDate(rowData.createdDate)
             }, 'createdDate', editingState, cellHandlers, false)
         },
         {
@@ -348,16 +341,6 @@ function GenericCourses({
                             <InputText id="name"
                                        onInput={(e) => setNewCourse({...newCourse, name: e.target.value})}/>
                         </div>
-
-                        <div className="p-field">
-                            <label htmlFor="part">Part</label>
-                            <Dropdown id="part"
-                                      options={COURSE_PARTS}
-                                      value={newCourse.part || ''}
-                                      onChange={(e) => setNewCourse({...newCourse, part: e.target.value})}/>
-
-                        </div>
-
                         {!isInitial && (
                             <>
                                 <div className="p-field">

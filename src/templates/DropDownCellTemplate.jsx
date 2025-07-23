@@ -11,11 +11,16 @@ const DropDownCellTemplate = (rowData, columnField, listFieldName, editingState,
 
     const getOptions = () => listOptions.map(e => nestedField ? e[nestedField] : listFieldName ? e[listFieldName] : e);
     const getDisplayValue = () => {
-        if (rowData[columnField]==null) return null;
-        if (nestedField) return rowData[columnField][listFieldName][nestedField];
-        return listFieldName ? rowData[columnField][listFieldName] :
-            rowData[columnField] ===true ? "Yes" : rowData[columnField] ===false ? "No" : rowData[columnField]
-            ;
+        const fieldData = rowData[columnField];
+        if (fieldData === null || fieldData === undefined) return null;
+
+        if (nestedField) {
+            const nestedData = fieldData[listFieldName];
+            return nestedData ? nestedData[nestedField] : null;
+        }
+
+        if (listFieldName) return fieldData[listFieldName];
+        return fieldData === true ? "Yes" : (fieldData === false ? "No" : fieldData);
     };
     return (
         <div style={{display: 'flex', alignItems: 'center'}}>

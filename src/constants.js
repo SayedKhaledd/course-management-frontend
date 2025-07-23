@@ -60,5 +60,10 @@ export const CURRENCIES = [
 ]
 export const RATINGS = [
     "Bad", "Good", "V Good", "Exellent"
-
+]
+export const PAYMENT_OR_REFUND_TYPES = [
+    "INSTALLMENT", "COURSE_PURCHASE", "REFUND"
+]
+export const PAYMENT_STATUS_SOURCES = [
+    "PAYMENT_STATUS", "REFUND_STATUS"
 ]

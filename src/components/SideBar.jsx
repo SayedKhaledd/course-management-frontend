@@ -26,6 +26,7 @@ const SideBar = () => {
         {label: "Installments", icon: "pi pi-money-bill", command: () => command("Installments")},
         {label: "Sales", icon: "pi pi-wallet", command: () => command("Sales")},
         {label: "Refunds", icon: "pi pi-refresh", command: () => command("Refunds")},
+        {label: "Evaluations", icon: "pi pi-file", command: () => command("Evaluations")},
         {label: "Users", icon: "pi pi-id-card", command: () => command("Users")},
 
         {

@@ -1,6 +1,7 @@
 import React from 'react';
-import {InputText} from 'primereact/inputtext';
 import {Button} from 'primereact/button';
+import {InputTextarea} from "primereact/inputtextarea";
+
 
 const TextFieldTemplate = ({value, field, editingState, handlers, isEditable = true}) => {
     const isEditing = editingState?.columnField === field;
@@ -14,7 +15,7 @@ const TextFieldTemplate = ({value, field, editingState, handlers, isEditable = t
             :
             isEditing ?
                 <>
-                    <InputText
+                    <InputTextarea
                         id={field}
                         value={editingState?.editedValue}
                         onChange={handlers.onChange}
@@ -32,21 +33,25 @@ const TextFieldTemplate = ({value, field, editingState, handlers, isEditable = t
                 </>
             :
                 <>
-
-                    <span className="cell-content"
-                          style={{marginRight: '8px'}}
-                    >{value || ''}</span>
+                    <div style={{
+                        width: '30%',
+                        whiteSpace: 'pre-wrap',
+                        overflowY: 'auto',
+                        maxHeight: '40px'
+                    }}>
+                        {value || ''}
+                    </div>
 
                     <Button
-                    label="Edit"
-                    icon="pi pi-pencil"
-                    onClick={() => {
-                        handlers.onEdit(value, field);
-                    }}
-                    className="p-button-text p-button-secondary"
-                    style={{width: 'fit-content'}}
+                        label="Edit"
+                        icon="pi pi-pencil"
+                        onClick={() => {
+                            handlers.onEdit(value, field);
+                        }}
+                        className="p-button-text p-button-secondary"
+                        style={{width: 'fit-content'}}
 
-                />
+                    />
 
                 </>
             }

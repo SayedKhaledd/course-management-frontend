@@ -4,12 +4,14 @@ import useAxios from "../hooks/useAxios.js";
 import React, {useEffect, useState} from "react";
 import apiEndpoints from "../apiEndpoints.js";
 import Notification from "../components/Notification.jsx";
-import Installments from "./Installments.jsx";
+import Installments from "../components/Installments.jsx";
 import Refunds from "./Refunds.jsx";
 import {Button} from "primereact/button";
 import {Dialog} from "primereact/dialog";
 import {Card} from "primereact/card";
 import {InputText} from "primereact/inputtext";
+import Evaluations from "./Evaluations.jsx";
+import {Dropdown} from "primereact/dropdown";
 
 const EnrollmentDetails = () => {
     const {clientId, courseId} = useParams();
@@ -20,10 +22,13 @@ const EnrollmentDetails = () => {
     const [actionOptions, setActionOptions] = useState([]);
     const [paymentMethodOptions, setPaymentMethodOptions] = useState([]);
     const [paymentStatusOptions, setPaymentStatusOptions] = useState([]);
+    const [evaluationStatusOptions, setEvaluationStatusOptions] = useState([]);
     const [installmentDisplayDialog, setInstallmentDisplayDialog] = useState(false);
     const [refundDisplayDialog, setRefundDisplayDialog] = useState(false);
+    const [evaluationDisplayDialog, setEvaluationDisplayDialog] = useState(false);
     const [newInstallment, setNewInstallment] = useState({});
     const [newRefund, setNewRefund] = useState({});
+    const [newEvaluation, setNewEvaluation] = useState({});
     const [refresh, setRefresh] = useState(false);
 
 
@@ -46,6 +51,14 @@ const EnrollmentDetails = () => {
                 setActionOptions(response.data.response);
             }).catch(error => {
             setNotification({message: 'Failed to fetch action options' + error, type: 'error'});
+        });
+    }
+    const fetchEvaluationStatusOptions = () => {
+        axios.get(apiEndpoints.evaluationStatuses)
+            .then(response => {
+                setEvaluationStatusOptions(response.data.response);
+            }).catch(error => {
+            setNotification({message: 'Failed to fetch evaluation status options' + error, type: 'error'});
         });
     }
 
@@ -97,6 +110,20 @@ const EnrollmentDetails = () => {
         });
     }
 
+    const createEvaluation = () => {
+        axios.post(apiEndpoints.createEvaluation, {
+            ...newEvaluation,
+            enrollmentId: enrollment.id
+        }).then(response => {
+            setNotification({message: 'Evaluation created successfully', type: 'success'});
+            fetchEnrollment();
+            setEvaluationDisplayDialog(false);
+            setRefresh(prev => !prev);
+        }).catch(error => {
+            setNotification({message: 'Failed to create evaluation' + error, type: 'error'});
+        });
+    }
+
 
     useEffect(() => {
         fetchEnrollment();
@@ -104,6 +131,7 @@ const EnrollmentDetails = () => {
         fetchActionOptions();
         fetchPaymentMethodOptions();
         fetchPaymentStatusOptions();
+        fetchEvaluationStatusOptions();
 
     }, [clientId, courseId]);
 
@@ -130,7 +158,13 @@ const EnrollmentDetails = () => {
             <Button
                 icon="pi pi-plus"
                 className="p-button-rounded p-button-primary"
-                style={{position: 'fixed', marginTop: '200px', bottom: '16px', right: '16px', zIndex: 1000}}
+                style={{
+                    position: 'fixed',
+                    marginTop: '200px',
+                    bottom: '16px',
+                    right: '16px',
+                    zIndex: 1000
+                }}
                 onClick={() => {
                     setInstallmentDisplayDialog(true);
                 }}
@@ -179,7 +213,14 @@ const EnrollmentDetails = () => {
             <Button
                 icon="pi pi-plus"
                 className="p-button-rounded p-button-primary"
-                style={{position: 'fixed', marginRight:'200px',marginTop: '200px', bottom: '16px', right: '16px', zIndex: 1000}}
+                style={{
+                    position: 'fixed',
+                    marginRight: '200px',
+                    marginTop: '200px',
+                    bottom: '16px',
+                    right: '16px',
+                    zIndex: 1000
+                }}
                 onClick={() => {
                     setRefundDisplayDialog(true);
                 }}
@@ -214,7 +255,71 @@ const EnrollmentDetails = () => {
                     </div>
                 </Card>
             </Dialog>
+            <div style={{margin: '10px'}}></div>
+            <Evaluations enrollmentId={enrollment.id} fetchEnrollment={fetchEnrollment} notification={notification}
+                         setNotification={setNotification}/>
 
+            <Button
+                icon="pi pi-plus"
+                className="p-button-rounded p-button-primary"
+                style={{
+                    position: 'fixed',
+                    marginRight: '400px',
+                    marginTop: '200px',
+                    bottom: '16px',
+                    right: '16px',
+                    zIndex: 1000
+                }}
+                onClick={() => {
+                    setEvaluationDisplayDialog(true);
+                }}
+                label="New Evaluation"
+            />
+            <Dialog
+                header="Create New Evaluation"
+                visible={evaluationDisplayDialog}
+                style={{width: '50vw'}}
+                modal
+                onHide={() => {
+                    setNewEvaluation({});
+                    setEvaluationDisplayDialog(false);
+                }}
+            >
+                <Card title="Evaluation Details">
+                    <div className="p-fluid">
+                        <div className="p-field">
+                            <label htmlFor="examName">Exam Name</label>
+                            <InputText id="examName"
+                                       onInput={(e) => setNewEvaluation({...newEvaluation, examName: e.target.value})}/>
+                        </div>
+                        <div className="p-field">
+                            <label htmlFor="evaluationStatus">Evaluation Status</label>
+                            <Dropdown id="evaluationStatus"
+                                      value={newEvaluation?.evaluationStatus?.status}
+                                      options={evaluationStatusOptions.map(status => status.status)}
+                                      placeholder="Select a course"
+                                      onChange={(e) => {
+                                          setNewEvaluation({
+                                              ...newEvaluation,
+                                                evaluationStatus: evaluationStatusOptions.find(status => status.status === e.target.value),
+                                                evaluationStatusId: evaluationStatusOptions.find(status => status.status === e.target.value).id
+                                          })
+
+                                      }}
+                            />
+                        </div>
+
+                        <div className="p-d-flex p-jc-end">
+                            <Button label="Save" icon="pi pi-check" onClick={createEvaluation} className="p-mr-2"/>
+                            <Button label="Cancel" icon="pi pi-times" onClick={() => {
+                                setNewEvaluation({});
+                                setEvaluationDisplayDialog(false);
+                            }}
+                                    className="p-button-secondary"/>
+                        </div>
+                    </div>
+                </Card>
+            </Dialog>
 
             <Notification status={notification.type} message={notification.message}/>
         </>
